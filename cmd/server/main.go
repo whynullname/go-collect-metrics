@@ -26,7 +26,7 @@ func main() {
 
 func runServer() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(`/update`, updateData)
+	mux.HandleFunc(`/update/`, updateData)
 	return http.ListenAndServe(`:8080`, mux)
 }
 
@@ -49,7 +49,6 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 		}
 		storage.counter[parts[1]] = i
 		w.WriteHeader(http.StatusOK)
-		break
 	case "gauge":
 		i, err := strconv.ParseFloat(parts[2], 64)
 		if err != nil {
@@ -58,7 +57,6 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 		}
 		storage.gauge[parts[1]] = i
 		w.WriteHeader(http.StatusOK)
-		break
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		return
