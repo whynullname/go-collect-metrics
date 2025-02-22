@@ -65,7 +65,7 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 		storage.gauge[parts[1]] = i
 		w.WriteHeader(http.StatusOK)
 	default:
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 }
