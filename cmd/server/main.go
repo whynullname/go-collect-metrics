@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -39,6 +40,12 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	rest := strings.TrimPrefix(path, "/update/")
 	parts := strings.Split(rest, "/")
+	fmt.Println(parts)
+
+	if len(parts) == 0 || len(parts) != 3 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	switch parts[0] {
 	case "counter":
