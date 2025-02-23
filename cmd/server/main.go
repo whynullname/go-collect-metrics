@@ -31,6 +31,11 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Header.Get("Contetnt-Type") != "text/plain" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	rest := strings.TrimPrefix(r.URL.Path, updateHandleFuncName)
 	parts := strings.Split(rest, "/")
 
