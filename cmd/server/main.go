@@ -5,21 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	storage "github.com/whynullname/go-collect-metrics/internal"
 )
 
-type MemStorage struct {
-	gauge   map[string]float64
-	counter map[string]int64
-}
-
-var storage MemStorage
-
 func main() {
-	storage = MemStorage{
-		gauge:   make(map[string]float64, 0),
-		counter: make(map[string]int64, 0),
-	}
-
 	if err := runServer(); err != nil {
 		panic(err)
 	}
@@ -54,7 +44,8 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		storage.counter[parts[1]] = i
+
+		storage.MemoryStorage.UpdateCounter(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	case "gauge":
 		i, err := strconv.ParseFloat(parts[2], 64)
@@ -62,7 +53,8 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		storage.gauge[parts[1]] = i
+
+		storage.MemoryStorage.UpdateGauge(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
