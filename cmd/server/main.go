@@ -38,7 +38,7 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch parts[0] {
-	case "counter":
+	case storage.CounterKey:
 		i, err := strconv.ParseInt(parts[2], 10, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -47,7 +47,7 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 
 		storage.MemoryStorage.UpdateCounter(parts[1], i)
 		w.WriteHeader(http.StatusOK)
-	case "gauge":
+	case storage.GaugeKey:
 		i, err := strconv.ParseFloat(parts[2], 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)

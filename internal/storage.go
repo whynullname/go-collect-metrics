@@ -5,14 +5,19 @@ type memoryStorage struct {
 	counter map[string]int64
 }
 
-var MemoryStorage memoryStorage
+const (
+	GaugeKey   = "gauge"
+	CounterKey = "counter"
+)
+
+var MemoryStorage *memoryStorage
 
 func init() {
 	MemoryStorage = newStorage()
 }
 
-func newStorage() memoryStorage {
-	return memoryStorage{
+func newStorage() *memoryStorage {
+	return &memoryStorage{
 		gauge:   make(map[string]float64, 0),
 		counter: make(map[string]int64, 0),
 	}
