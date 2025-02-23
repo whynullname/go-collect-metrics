@@ -1,12 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	storage "github.com/whynullname/go-collect-metrics/internal"
+)
+
+const (
+	updateHandleFuncName = "/update/"
+	port                 = ":8080"
 )
 
 func main() {
@@ -17,8 +21,8 @@ func main() {
 
 func runServer() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(`/update/`, updateData)
-	return http.ListenAndServe(`:8080`, mux)
+	mux.HandleFunc(updateHandleFuncName, updateData)
+	return http.ListenAndServe(port, mux)
 }
 
 func updateData(w http.ResponseWriter, r *http.Request) {
@@ -27,12 +31,10 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := r.URL.Path
-	rest := strings.TrimPrefix(path, "/update/")
+	rest := strings.TrimPrefix(r.URL.Path, updateHandleFuncName)
 	parts := strings.Split(rest, "/")
-	fmt.Println(parts)
 
-	if len(parts) == 0 || len(parts) != 3 {
+	if len(parts) != 3 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
