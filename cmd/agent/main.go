@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	storage "github.com/whynullname/go-collect-metrics/internal"
+	storage "github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
 const (
