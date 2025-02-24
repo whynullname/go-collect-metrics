@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ const (
 )
 
 func main() {
+	fmt.Println("Start server")
 	if err := runServer(); err != nil {
 		panic(err)
 	}
@@ -27,11 +29,13 @@ func runServer() error {
 
 func updateData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Method not Post, return!")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	if r.Header.Get("Contetnt-Type") != "text/plain" {
+	if r.Header.Get("Content-Type") != "text/plain" {
+		fmt.Println("Content type not text/plain, return!")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -52,7 +56,7 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		storage.MemoryStorage.UpdateCounter(parts[1], i)
+		storage.MemoryStorage.UpdateCounterData(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	case storage.GaugeKey:
 		i, err := strconv.ParseFloat(parts[2], 64)
@@ -61,7 +65,7 @@ func updateData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		storage.MemoryStorage.UpdateGauge(parts[1], i)
+		storage.MemoryStorage.UpdateGaugeData(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
