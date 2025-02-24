@@ -1,7 +1,5 @@
 package storage
 
-import "fmt"
-
 type memoryStorage struct {
 	gauge   map[string]float64
 	counter map[string]int64
@@ -26,12 +24,10 @@ func newStorage() *memoryStorage {
 }
 
 func (s *memoryStorage) UpdateGaugeData(key string, value float64) {
-	fmt.Printf("Update gauge, key = %s value = %.2f\n", key, value)
 	MemoryStorage.gauge[key] = value
 }
 
 func (s *memoryStorage) UpdateCounterData(key string, value int64) {
-	fmt.Printf("Update counter, key = %s value = %d\n", key, value)
 	MemoryStorage.counter[key] = value
 }
 

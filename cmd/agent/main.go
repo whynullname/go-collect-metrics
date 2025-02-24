@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"net/http"
 	"runtime"
@@ -17,7 +18,7 @@ const (
 )
 
 func main() {
-	fmt.Println("Start agent")
+	log.Println("Start agent")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go updateMetrics()
