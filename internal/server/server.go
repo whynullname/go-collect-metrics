@@ -1,17 +1,17 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
 type Server struct {
 	storage *storage.MemoryStorage
+	Router  chi.Router
 }
 
 const (
@@ -20,60 +20,50 @@ const (
 )
 
 func NewServer(storage *storage.MemoryStorage) *Server {
-	return &Server{
+	serverInstance := &Server{
 		storage: storage,
 	}
+	serverInstance.Router = serverInstance.createRouter()
+	return serverInstance
+}
+
+func (s *Server) createRouter() chi.Router {
+	r := chi.NewRouter()
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/{key}/{merticName}/{metricValue}", s.UpdateData)
+	})
+	return r
 }
 
 func (s *Server) ListenAndServe() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc(updateHandleFuncName, s.UpdateData)
-	return http.ListenAndServe(adress, mux)
+	return http.ListenAndServe(adress, s.Router)
 }
 
 func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		fmt.Println("Method not Post, return!")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	if r.Header.Get("Content-Type") != "text/plain" {
-		fmt.Println("Content type not text/plain, return!")
+		log.Println("Content type not text/plain, return!")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	rest := strings.TrimPrefix(r.URL.Path, updateHandleFuncName)
-	parts := strings.Split(rest, "/")
+	keyName := chi.URLParam(r, "key")
 
-	if len(parts) != 3 {
-		w.WriteHeader(http.StatusNotFound)
+	if keyName != storage.CounterKey && keyName != storage.GaugeKey {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	log.Println("Data received")
-	switch parts[0] {
-	case storage.CounterKey:
-		i, err := strconv.ParseInt(parts[2], 10, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 
-		s.storage.UpdateCounterData(parts[1], i)
-		w.WriteHeader(http.StatusOK)
-	case storage.GaugeKey:
-		i, err := strconv.ParseFloat(parts[2], 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
 
-		s.storage.UpdateGaugeData(parts[1], i)
-		w.WriteHeader(http.StatusOK)
-	default:
+	i, err := strconv.ParseFloat(metricValue, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	s.storage.UpdateData(keyName, metricName, i)
+	w.WriteHeader(http.StatusOK)
 }

@@ -17,6 +17,15 @@ func NewStorage() *MemoryStorage {
 	}
 }
 
+func (s *MemoryStorage) UpdateData(dataType string, key string, value float64) {
+	switch dataType {
+	case GaugeKey:
+		s.UpdateGaugeData(key, value)
+	case CounterKey:
+		s.UpdateCounterData(key, int64(value))
+	}
+}
+
 func (s *MemoryStorage) UpdateGaugeData(key string, value float64) {
 	s.gauge[key] = value
 }

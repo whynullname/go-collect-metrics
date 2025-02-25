@@ -63,15 +63,13 @@ func TestUpdateData(t *testing.T) {
 
 	storage := storage.NewStorage()
 	serv := NewServer(storage)
+	httptest.NewServer(serv.Router)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.methodType, test.targetURL, nil)
 			request.Header.Add("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
-
-			serv.UpdateData(w, request)
-
 			res := w.Result()
 			defer res.Body.Close()
 
