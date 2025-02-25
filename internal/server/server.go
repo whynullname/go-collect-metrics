@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 )
 
 type Server struct {
+	storage storage.MemoryStorage
 }
 
 const (
@@ -17,17 +19,19 @@ const (
 	adress               = "localhost:8080"
 )
 
-func NewServer() *Server {
-	return &Server{}
+func NewServer(storage storage.MemoryStorage) *Server {
+	return &Server{
+		storage: storage,
+	}
 }
 
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(updateHandleFuncName, UpdateData)
+	mux.HandleFunc(updateHandleFuncName, s.UpdateData)
 	return http.ListenAndServe(adress, mux)
 }
 
-func UpdateData(w http.ResponseWriter, r *http.Request) {
+func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		fmt.Println("Method not Post, return!")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -48,6 +52,7 @@ func UpdateData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Data received")
 	switch parts[0] {
 	case storage.CounterKey:
 		i, err := strconv.ParseInt(parts[2], 10, 64)
@@ -56,7 +61,7 @@ func UpdateData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		storage.MemoryStorage.UpdateCounterData(parts[1], i)
+		s.storage.UpdateCounterData(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	case storage.GaugeKey:
 		i, err := strconv.ParseFloat(parts[2], 64)
@@ -65,7 +70,7 @@ func UpdateData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		storage.MemoryStorage.UpdateGaugeData(parts[1], i)
+		s.storage.UpdateGaugeData(parts[1], i)
 		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusBadRequest)

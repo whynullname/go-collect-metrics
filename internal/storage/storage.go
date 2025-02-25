@@ -1,6 +1,6 @@
 package storage
 
-type memoryStorage struct {
+type MemoryStorage struct {
 	gauge   map[string]float64
 	counter map[string]int64
 }
@@ -10,43 +10,37 @@ const (
 	CounterKey = "counter"
 )
 
-var MemoryStorage *memoryStorage
-
-func init() {
-	MemoryStorage = newStorage()
-}
-
-func newStorage() *memoryStorage {
-	return &memoryStorage{
+func NewStorage() *MemoryStorage {
+	return &MemoryStorage{
 		gauge:   make(map[string]float64, 0),
 		counter: make(map[string]int64, 0),
 	}
 }
 
-func (s *memoryStorage) UpdateGaugeData(key string, value float64) {
-	MemoryStorage.gauge[key] = value
+func (s *MemoryStorage) UpdateGaugeData(key string, value float64) {
+	s.gauge[key] = value
 }
 
-func (s *memoryStorage) UpdateCounterData(key string, value int64) {
-	MemoryStorage.counter[key] = value
+func (s *MemoryStorage) UpdateCounterData(key string, value int64) {
+	s.counter[key] = value
 }
 
-func (s *memoryStorage) GetGaugeData(key string) (float64, bool) {
-	val, ok := MemoryStorage.gauge[key]
+func (s *MemoryStorage) GetGaugeData(key string) (float64, bool) {
+	val, ok := s.gauge[key]
 
 	return val, ok
 }
 
-func (s *memoryStorage) GetCounterData(key string) (int64, bool) {
-	val, ok := MemoryStorage.counter[key]
+func (s *MemoryStorage) GetCounterData(key string) (int64, bool) {
+	val, ok := s.counter[key]
 
 	return val, ok
 }
 
-func (s *memoryStorage) GetAllGaugeData() map[string]float64 {
-	return MemoryStorage.gauge
+func (s *MemoryStorage) GetAllGaugeData() map[string]float64 {
+	return s.gauge
 }
 
-func (s *memoryStorage) GetAllCounterData() map[string]int64 {
-	return MemoryStorage.counter
+func (s *MemoryStorage) GetAllCounterData() map[string]int64 {
+	return s.counter
 }
