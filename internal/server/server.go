@@ -54,7 +54,6 @@ func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Data received")
-
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 

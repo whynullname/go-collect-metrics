@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
@@ -63,17 +64,19 @@ func TestUpdateData(t *testing.T) {
 
 	storage := storage.NewStorage()
 	serv := NewServer(storage)
-	httptest.NewServer(serv.Router)
+	client := httptest.NewServer(serv.Router)
+	defer client.Close()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.methodType, test.targetURL, nil)
+			request := httptest.NewRequest(test.methodType, client.URL+test.targetURL, nil)
 			request.Header.Add("Content-Type", test.contentType)
-			w := httptest.NewRecorder()
-			res := w.Result()
-			defer res.Body.Close()
 
-			assert.Equal(t, test.wantCode, res.StatusCode)
+			resp, err := client.Client().Do(request)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, test.wantCode, resp.StatusCode)
 		})
 	}
 }
