@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"net/http"
 	"runtime"
@@ -64,11 +65,25 @@ func (a *Agent) UpdateMetrics() {
 func (a *Agent) SendMetrics() {
 	for k, v := range a.storage.GetAllGaugeData() {
 		url := fmt.Sprintf("http://localhost:8080/update/%s/%s/%.2f", storage.GaugeKey, k, v)
-		http.Post(url, "text/plain", nil)
+		resp, err := http.Post(url, "text/plain", nil)
+
+		if err != nil {
+			log.Println("Can't send post method!")
+			return
+		}
+
+		defer resp.Body.Close()
 	}
 
 	for k, v := range a.storage.GetAllCounterData() {
 		url := fmt.Sprintf("http://localhost:8080/update/%s/%s/%d", storage.CounterKey, k, v)
-		http.Post(url, "text/plain", nil)
+		resp, err := http.Post(url, "text/plain", nil)
+
+		if err != nil {
+			log.Println("Can't send post method!")
+			return
+		}
+
+		defer resp.Body.Close()
 	}
 }
