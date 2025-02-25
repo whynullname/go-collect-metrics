@@ -62,7 +62,7 @@ func TestUpdateData(t *testing.T) {
 	}
 
 	storage := storage.NewStorage()
-	serv := NewServer(*storage)
+	serv := NewServer(storage)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

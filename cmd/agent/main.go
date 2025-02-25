@@ -19,7 +19,7 @@ func main() {
 	log.Println("Start agent")
 	memStats := runtime.MemStats{}
 	storage := storage.NewStorage()
-	instance := agent.NewAgent(memStats, *storage)
+	instance := agent.NewAgent(&memStats, storage)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go sendMetrics(instance)

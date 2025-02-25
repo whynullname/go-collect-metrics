@@ -10,11 +10,11 @@ import (
 )
 
 type Agent struct {
-	memStats runtime.MemStats
-	storage  storage.MemoryStorage
+	memStats *runtime.MemStats
+	storage  *storage.MemoryStorage
 }
 
-func NewAgent(memStats runtime.MemStats, storage storage.MemoryStorage) *Agent {
+func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage) *Agent {
 	return &Agent{
 		memStats: memStats,
 		storage:  storage,
@@ -23,7 +23,7 @@ func NewAgent(memStats runtime.MemStats, storage storage.MemoryStorage) *Agent {
 
 func (a *Agent) UpdateMetrics() {
 	memStats := a.memStats
-	runtime.ReadMemStats(&memStats)
+	runtime.ReadMemStats(memStats)
 	a.storage.UpdateGaugeData("Alloc", float64(memStats.Alloc))
 	a.storage.UpdateGaugeData("Frees", float64(memStats.Frees))
 	a.storage.UpdateGaugeData("BuckHashSys", float64(memStats.BuckHashSys))

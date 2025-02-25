@@ -11,6 +11,9 @@ import (
 func TestUpdateMetrics(t *testing.T) {
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
+	storage := storage.NewStorage()
+	agInstance := NewAgent(&memStats, storage)
+	agInstance.UpdateMetrics()
 	tests := []struct {
 		name      string
 		dataName  string
@@ -28,12 +31,8 @@ func TestUpdateMetrics(t *testing.T) {
 		},
 	}
 
-	storage := storage.NewStorage()
-	agInstance := NewAgent(memStats, *storage)
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			agInstance.UpdateMetrics()
 			val, ok := agInstance.storage.GetGaugeData(test.dataName)
 			assert.True(t, ok)
 			assert.Equal(t, val, test.dataValue)

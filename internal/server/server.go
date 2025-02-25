@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	storage storage.MemoryStorage
+	storage *storage.MemoryStorage
 }
 
 const (
@@ -19,7 +19,7 @@ const (
 	adress               = "localhost:8080"
 )
 
-func NewServer(storage storage.MemoryStorage) *Server {
+func NewServer(storage *storage.MemoryStorage) *Server {
 	return &Server{
 		storage: storage,
 	}
