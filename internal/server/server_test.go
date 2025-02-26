@@ -37,7 +37,7 @@ func TestUpdateData(t *testing.T) {
 			targetURL:   "/update/gauge/someMetrics/500",
 			contentType: "application/json",
 			methodType:  http.MethodPost,
-			wantCode:    http.StatusMethodNotAllowed,
+			wantCode:    http.StatusBadRequest,
 		},
 		{
 			name:        "test get method",
