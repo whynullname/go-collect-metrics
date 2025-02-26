@@ -83,11 +83,11 @@ func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
-	// if r.Header.Get("Content-Type") != "text/plain" {
-	// 	log.Println("Content type not text/plain, return!")
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
+	if r.Header.Get("Content-Type") != "text/plain" {
+		log.Println("Content type not text/plain, return!")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	keyName := chi.URLParam(r, "key")
 
