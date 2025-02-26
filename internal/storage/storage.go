@@ -22,7 +22,15 @@ func (s *MemoryStorage) UpdateData(dataType string, key string, value float64) {
 	case GaugeKey:
 		s.UpdateGaugeData(key, value)
 	case CounterKey:
-		s.UpdateCounterData(key, int64(value))
+		newValue := int64(value)
+		val, ok := s.GetCounterData(key)
+		var sum int64 = 0
+		if !ok {
+			sum = newValue
+		} else {
+			sum = val + newValue
+		}
+		s.UpdateCounterData(key, sum)
 	}
 }
 
