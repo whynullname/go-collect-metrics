@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -32,6 +33,7 @@ func (s *Server) createRouter() chi.Router {
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/{key}/{merticName}/{metricValue}", s.UpdateData)
 	})
+	r.Get("/value/{metricType}/{metricName}", s.GetData)
 	return r
 }
 
@@ -53,8 +55,7 @@ func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Data received")
-	metricName := chi.URLParam(r, "metricName")
+	metricName := chi.URLParam(r, "merticName")
 	metricValue := chi.URLParam(r, "metricValue")
 
 	i, err := strconv.ParseFloat(metricValue, 64)
@@ -63,6 +64,28 @@ func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Data received and updated! Key %s, metricaName %s, metricValue %s \n", keyName, metricName, metricValue)
 	s.storage.UpdateData(keyName, metricName, i)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) GetData(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	log.Printf("Try get metric type %s \n", metricType)
+	if metricType != storage.CounterKey && metricType != storage.GaugeKey {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	metricName := chi.URLParam(r, "metricName")
+
+	val, ok := s.storage.GetData(metricType, metricName)
+
+	if !ok {
+		log.Printf("Can't get mertic value for %s \n", metricName)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	io.WriteString(w, strconv.FormatFloat(val, 'f', 6, 64))
 }
