@@ -130,5 +130,5 @@ func (s *Server) GetData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, strconv.FormatFloat(val, 'f', 6, 64))
+	io.WriteString(w, strconv.FormatFloat(val, 'f', -1, 64))
 }
