@@ -1,6 +1,7 @@
 package server
 
 import (
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +19,28 @@ type Server struct {
 const (
 	updateHandleFuncName = "/update/"
 	adress               = "localhost:8080"
+	allDataHTMLTemplate  = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Storage Data</title>
+</head>
+<body>
+    <h1>Gauge data</h1>
+    <ul>
+        {{range $key, $value := .Gauge}}
+            <li><strong>{{$key}}:</strong> {{$value}}</li>
+        {{end}}
+    </ul>
+
+    <h1>Counter data</h1>
+    <ul>
+        {{range $key, $value := .Counter}}
+            <li><strong>{{$key}}:</strong> {{$value}}</li>
+        {{end}}
+    </ul>
+</body>
+</html>`
 )
 
 func NewServer(storage *storage.MemoryStorage) *Server {
@@ -30,15 +53,33 @@ func NewServer(storage *storage.MemoryStorage) *Server {
 
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Route("/update", func(r chi.Router) {
-		r.Post("/{key}/{merticName}/{metricValue}", s.UpdateData)
+
+	r.Route("/", func(r chi.Router) {
+		r.Get("/", s.GetAllData)
+		r.Post("/update/{key}/{merticName}/{metricValue}", s.UpdateData)
+		r.Get("/value/{metricType}/{metricName}", s.GetData)
 	})
-	r.Get("/value/{metricType}/{metricName}", s.GetData)
 	return r
 }
 
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(adress, s.Router)
+}
+
+func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.New("webpage").Parse(allDataHTMLTemplate)
+
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, s.storage)
+
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {

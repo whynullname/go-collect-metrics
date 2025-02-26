@@ -1,8 +1,8 @@
 package storage
 
 type MemoryStorage struct {
-	gauge   map[string]float64
-	counter map[string]int64
+	Gauge   map[string]float64
+	Counter map[string]int64
 }
 
 const (
@@ -12,8 +12,8 @@ const (
 
 func NewStorage() *MemoryStorage {
 	return &MemoryStorage{
-		gauge:   make(map[string]float64, 0),
-		counter: make(map[string]int64, 0),
+		Gauge:   make(map[string]float64, 0),
+		Counter: make(map[string]int64, 0),
 	}
 }
 
@@ -39,29 +39,29 @@ func (s *MemoryStorage) GetData(dataType string, key string) (float64, bool) {
 }
 
 func (s *MemoryStorage) UpdateGaugeData(key string, value float64) {
-	s.gauge[key] = value
+	s.Gauge[key] = value
 }
 
 func (s *MemoryStorage) UpdateCounterData(key string, value int64) {
-	s.counter[key] = value
+	s.Counter[key] = value
 }
 
 func (s *MemoryStorage) GetGaugeData(key string) (float64, bool) {
-	val, ok := s.gauge[key]
+	val, ok := s.Gauge[key]
 
 	return val, ok
 }
 
 func (s *MemoryStorage) GetCounterData(key string) (int64, bool) {
-	val, ok := s.counter[key]
+	val, ok := s.Counter[key]
 
 	return val, ok
 }
 
 func (s *MemoryStorage) GetAllGaugeData() map[string]float64 {
-	return s.gauge
+	return s.Gauge
 }
 
 func (s *MemoryStorage) GetAllCounterData() map[string]int64 {
-	return s.counter
+	return s.Counter
 }
