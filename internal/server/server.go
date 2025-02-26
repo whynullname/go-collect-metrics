@@ -83,7 +83,9 @@ func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "text/plain" {
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType != "" && contentType != "text/plain" {
 		log.Println("Content type not text/plain, return!")
 		w.WriteHeader(http.StatusBadRequest)
 		return
