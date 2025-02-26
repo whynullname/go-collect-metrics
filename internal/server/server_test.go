@@ -70,6 +70,7 @@ func TestUpdateData(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.methodType, client.URL+test.targetURL, nil)
+			request.RequestURI = ""
 			request.Header.Add("Content-Type", test.contentType)
 
 			resp, err := client.Client().Do(request)
