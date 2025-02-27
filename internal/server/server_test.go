@@ -63,7 +63,7 @@ func TestUpdateData(t *testing.T) {
 	}
 
 	storage := storage.NewStorage()
-	serv := NewServer(storage)
+	serv := NewServer(storage, "localhost:8080")
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 

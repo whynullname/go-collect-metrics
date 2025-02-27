@@ -8,10 +8,11 @@ import (
 )
 
 func main() {
+	parseFlags()
 	storage := storage.NewStorage()
-	server := server.NewServer(storage)
+	server := server.NewServer(storage, endPointAdress)
 
-	log.Println("Start server")
+	log.Printf("Start server in %s \n", endPointAdress)
 
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)

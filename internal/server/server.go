@@ -12,13 +12,13 @@ import (
 )
 
 type Server struct {
-	storage *storage.MemoryStorage
-	Router  chi.Router
+	storage        *storage.MemoryStorage
+	endPointAdress string
+	Router         chi.Router
 }
 
 const (
 	updateHandleFuncName = "/update/"
-	adress               = "localhost:8080"
 	allDataHTMLTemplate  = `
 <!DOCTYPE html>
 <html>
@@ -43,9 +43,10 @@ const (
 </html>`
 )
 
-func NewServer(storage *storage.MemoryStorage) *Server {
+func NewServer(storage *storage.MemoryStorage, endPointAdress string) *Server {
 	serverInstance := &Server{
-		storage: storage,
+		storage:        storage,
+		endPointAdress: endPointAdress,
 	}
 	serverInstance.Router = serverInstance.createRouter()
 	return serverInstance
@@ -63,7 +64,7 @@ func (s *Server) createRouter() chi.Router {
 }
 
 func (s *Server) ListenAndServe() error {
-	return http.ListenAndServe(adress, s.Router)
+	return http.ListenAndServe(s.endPointAdress, s.Router)
 }
 
 func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
