@@ -11,14 +11,16 @@ import (
 )
 
 type Agent struct {
-	memStats *runtime.MemStats
-	storage  *storage.MemoryStorage
+	memStats     *runtime.MemStats
+	storage      *storage.MemoryStorage
+	serverAdress string
 }
 
-func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage) *Agent {
+func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage, serverAdress string) *Agent {
 	return &Agent{
-		memStats: memStats,
-		storage:  storage,
+		memStats:     memStats,
+		storage:      storage,
+		serverAdress: serverAdress,
 	}
 }
 
@@ -64,7 +66,7 @@ func (a *Agent) UpdateMetrics() {
 
 func (a *Agent) SendMetrics() {
 	for k, v := range a.storage.GetAllGaugeData() {
-		url := fmt.Sprintf("http://localhost:8080/update/%s/%s/%.2f", storage.GaugeKey, k, v)
+		url := fmt.Sprintf("%s/update/%s/%s/%.2f", a.serverAdress, storage.GaugeKey, k, v)
 		resp, err := http.Post(url, "text/plain", nil)
 
 		if err != nil {
@@ -76,7 +78,7 @@ func (a *Agent) SendMetrics() {
 	}
 
 	for k, v := range a.storage.GetAllCounterData() {
-		url := fmt.Sprintf("http://localhost:8080/update/%s/%s/%d", storage.CounterKey, k, v)
+		url := fmt.Sprintf("%s/update/%s/%s/%d", a.serverAdress, storage.CounterKey, k, v)
 		resp, err := http.Post(url, "text/plain", nil)
 
 		if err != nil {

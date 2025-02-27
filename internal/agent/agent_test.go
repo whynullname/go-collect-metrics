@@ -12,7 +12,7 @@ func TestUpdateMetrics(t *testing.T) {
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
 	storage := storage.NewStorage()
-	agInstance := NewAgent(&memStats, storage)
+	agInstance := NewAgent(&memStats, storage, "localhost:8080")
 	agInstance.UpdateMetrics()
 	tests := []struct {
 		name      string
