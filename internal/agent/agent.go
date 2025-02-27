@@ -66,11 +66,11 @@ func (a *Agent) UpdateMetrics() {
 
 func (a *Agent) SendMetrics() {
 	for k, v := range a.storage.GetAllGaugeData() {
-		url := fmt.Sprintf("%s/update/%s/%s/%.2f", a.serverAdress, storage.GaugeKey, k, v)
+		url := fmt.Sprintf("http://%s/update/%s/%s/%.2f", a.serverAdress, storage.GaugeKey, k, v)
 		resp, err := http.Post(url, "text/plain", nil)
 
 		if err != nil {
-			log.Println("Can't send post method!")
+			log.Printf("Can't send post method in %s ! Err %s \n", url, err)
 			return
 		}
 
@@ -78,11 +78,11 @@ func (a *Agent) SendMetrics() {
 	}
 
 	for k, v := range a.storage.GetAllCounterData() {
-		url := fmt.Sprintf("%s/update/%s/%s/%d", a.serverAdress, storage.CounterKey, k, v)
+		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.serverAdress, storage.CounterKey, k, v)
 		resp, err := http.Post(url, "text/plain", nil)
 
 		if err != nil {
-			log.Println("Can't send post method!")
+			log.Printf("Can't send post method in %s ! Err %s \n", url, err)
 			return
 		}
 
