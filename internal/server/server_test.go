@@ -1,12 +1,16 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/whynullname/go-collect-metrics/internal/agent"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
@@ -78,6 +82,76 @@ func TestUpdateData(t *testing.T) {
 			defer resp.Body.Close()
 
 			assert.Equal(t, test.wantCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestGetData(t *testing.T) {
+	memStats := runtime.MemStats{}
+	dataStorage := storage.NewStorage()
+	agent := agent.NewAgent(&memStats, dataStorage, ":8080")
+	serv := NewServer(dataStorage, ":8080")
+	client := httptest.NewServer(serv.Router)
+	defer client.Close()
+	agent.UpdateMetrics()
+
+	tests := []struct {
+		name       string
+		method     string
+		url        string
+		headerCode int
+		response   string
+	}{
+		{
+			name:       "positive test #1",
+			method:     http.MethodGet,
+			url:        "/value/gauge/Alloc",
+			headerCode: http.StatusOK,
+			response:   strconv.FormatUint(memStats.Alloc, 10),
+		},
+		{
+			name:       "positive test #2",
+			method:     http.MethodGet,
+			url:        "/value/gauge/NextGC",
+			headerCode: http.StatusOK,
+			response:   strconv.FormatUint(memStats.NextGC, 10),
+		},
+		{
+			name:       "bad http method",
+			method:     http.MethodPost,
+			url:        "/value/gauge/NextGC",
+			headerCode: http.StatusMethodNotAllowed,
+			response:   "",
+		},
+		{
+			name:       "bad data type",
+			method:     http.MethodGet,
+			url:        "/value/badDataType/someData",
+			headerCode: http.StatusNotFound,
+			response:   "",
+		},
+		{
+			name:       "bad data name",
+			method:     http.MethodGet,
+			url:        "/value/gauge/badDataName",
+			headerCode: http.StatusNotFound,
+			response:   "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, client.URL+test.url, nil)
+			request.RequestURI = ""
+			resp, err := client.Client().Do(request)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			require.Equal(t, test.headerCode, resp.StatusCode)
+
+			data, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Equal(t, test.response, string(data))
 		})
 	}
 }
