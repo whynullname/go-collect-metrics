@@ -64,6 +64,13 @@ func TestUpdateData(t *testing.T) {
 			methodType:  http.MethodPost,
 			wantCode:    http.StatusBadRequest,
 		},
+		{
+			name:        "test bad gauge value",
+			targetURL:   "/update/gauge/someMetric/badValue",
+			contentType: "text/plaint",
+			methodType:  http.MethodPost,
+			wantCode:    http.StatusBadRequest,
+		},
 	}
 
 	storage := storage.NewStorage()
