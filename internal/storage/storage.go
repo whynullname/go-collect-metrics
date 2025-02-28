@@ -56,13 +56,11 @@ func (s *MemoryStorage) UpdateCounterData(key string, value int64) {
 
 func (s *MemoryStorage) GetGaugeData(key string) (float64, bool) {
 	val, ok := s.Gauge[key]
-
 	return val, ok
 }
 
 func (s *MemoryStorage) GetCounterData(key string) (int64, bool) {
 	val, ok := s.Counter[key]
-
 	return val, ok
 }
 

@@ -56,7 +56,7 @@ func (a *Agent) UpdateMetrics() {
 	val, ok := a.storage.GetCounterData("PollCount")
 
 	if !ok {
-		val = 0
+		val = 1
 	} else {
 		val++
 	}
