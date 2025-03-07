@@ -8,13 +8,14 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
 type Server struct {
-	storage        *storage.MemoryStorage
-	endPointAdress string
-	Router         chi.Router
+	storage *storage.MemoryStorage
+	Config  *config.ServerConfig
+	Router  chi.Router
 }
 
 const (
@@ -43,10 +44,10 @@ const (
 </html>`
 )
 
-func NewServer(storage *storage.MemoryStorage, endPointAdress string) *Server {
+func NewServer(storage *storage.MemoryStorage, config *config.ServerConfig) *Server {
 	serverInstance := &Server{
-		storage:        storage,
-		endPointAdress: endPointAdress,
+		storage: storage,
+		Config:  config,
 	}
 	serverInstance.Router = serverInstance.createRouter()
 	return serverInstance
@@ -56,18 +57,18 @@ func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", s.GetAllData)
-		r.Post("/update/{key}/{merticName}/{metricValue}", s.UpdateData)
-		r.Get("/value/{metricType}/{metricName}", s.GetData)
+		r.Get("/", s.GetAllMetrics)
+		r.Post("/update/{key}/{merticName}/{metricValue}", s.UpdateMetric)
+		r.Get("/value/{metricType}/{metricName}", s.GetMetricByName)
 	})
 	return r
 }
 
 func (s *Server) ListenAndServe() error {
-	return http.ListenAndServe(s.endPointAdress, s.Router)
+	return http.ListenAndServe(s.Config.EndPointAdress, s.Router)
 }
 
-func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("webpage").Parse(allDataHTMLTemplate)
 
 	if err != nil {
@@ -83,7 +84,7 @@ func (s *Server) GetAllData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
+func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "text/plain" {
@@ -109,11 +110,11 @@ func (s *Server) UpdateData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Data received and updated! Key %s, metricaName %s, metricValue %s \n", keyName, metricName, metricValue)
-	s.storage.UpdateData(keyName, metricName, i)
+	s.storage.UpdateMetrics(keyName, metricName, i)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) GetData(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	log.Printf("Try get metric type %s \n", metricType)
 	if metricType != storage.CounterKey && metricType != storage.GaugeKey {
@@ -123,7 +124,7 @@ func (s *Server) GetData(w http.ResponseWriter, r *http.Request) {
 
 	metricName := chi.URLParam(r, "metricName")
 
-	val, ok := s.storage.GetData(metricType, metricName)
+	val, ok := s.storage.GetMetrics(metricType, metricName)
 
 	if !ok {
 		log.Printf("Can't get mertic value for %s \n", metricName)

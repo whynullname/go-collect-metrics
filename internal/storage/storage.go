@@ -17,57 +17,57 @@ func NewStorage() *MemoryStorage {
 	}
 }
 
-func (s *MemoryStorage) UpdateData(dataType string, key string, value float64) {
+func (s *MemoryStorage) UpdateMetrics(dataType string, key string, value float64) {
 	switch dataType {
 	case GaugeKey:
-		s.UpdateGaugeData(key, value)
+		s.UpdateGaugeMetric(key, value)
 	case CounterKey:
-		newValue := int64(value)
-		val, ok := s.GetCounterData(key)
-		var sum int64 = 0
-		if !ok {
-			sum = newValue
-		} else {
-			sum = val + newValue
-		}
-		s.UpdateCounterData(key, sum)
+		s.UpdateCounterMetric(key)
 	}
 }
 
-func (s *MemoryStorage) GetData(dataType string, key string) (float64, bool) {
+func (s *MemoryStorage) GetMetrics(dataType string, key string) (float64, bool) {
 	switch dataType {
 	case GaugeKey:
-		return s.GetGaugeData(key)
+		return s.GetGaugeMetric(key)
 	case CounterKey:
-		value, ok := s.GetCounterData(key)
+		value, ok := s.GetCounterMetric(key)
 		return float64(value), ok
 	}
 
 	return 0, false
 }
 
-func (s *MemoryStorage) UpdateGaugeData(key string, value float64) {
+func (s *MemoryStorage) UpdateGaugeMetric(key string, value float64) {
 	s.Gauge[key] = value
 }
 
-func (s *MemoryStorage) UpdateCounterData(key string, value int64) {
-	s.Counter[key] = value
+func (s *MemoryStorage) UpdateCounterMetric(key string) {
+	val, ok := s.GetCounterMetric(key)
+
+	if !ok {
+		val = 1
+	} else {
+		val++
+	}
+
+	s.Counter[key] = val
 }
 
-func (s *MemoryStorage) GetGaugeData(key string) (float64, bool) {
+func (s *MemoryStorage) GetGaugeMetric(key string) (float64, bool) {
 	val, ok := s.Gauge[key]
 	return val, ok
 }
 
-func (s *MemoryStorage) GetCounterData(key string) (int64, bool) {
+func (s *MemoryStorage) GetCounterMetric(key string) (int64, bool) {
 	val, ok := s.Counter[key]
 	return val, ok
 }
 
-func (s *MemoryStorage) GetAllGaugeData() map[string]float64 {
+func (s *MemoryStorage) GetAllGaugeMetrics() map[string]float64 {
 	return s.Gauge
 }
 
-func (s *MemoryStorage) GetAllCounterData() map[string]int64 {
+func (s *MemoryStorage) GetAllCounterMetrics() map[string]int64 {
 	return s.Counter
 }
