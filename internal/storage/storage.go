@@ -17,16 +17,16 @@ func NewStorage() *MemoryStorage {
 	}
 }
 
-func (s *MemoryStorage) UpdateMetrics(dataType string, key string, value float64) {
+func (s *MemoryStorage) UpdateMetricsValue(dataType string, key string, value float64) {
 	switch dataType {
 	case GaugeKey:
-		s.UpdateGaugeMetric(key, value)
+		s.SetGaugeMetricValue(key, value)
 	case CounterKey:
-		s.UpdateCounterMetric(key)
+		s.AddValueToCounterMetric(key, int64(value))
 	}
 }
 
-func (s *MemoryStorage) GetMetrics(dataType string, key string) (float64, bool) {
+func (s *MemoryStorage) GetMetricValue(dataType string, key string) (float64, bool) {
 	switch dataType {
 	case GaugeKey:
 		return s.GetGaugeMetric(key)
@@ -38,17 +38,17 @@ func (s *MemoryStorage) GetMetrics(dataType string, key string) (float64, bool) 
 	return 0, false
 }
 
-func (s *MemoryStorage) UpdateGaugeMetric(key string, value float64) {
+func (s *MemoryStorage) SetGaugeMetricValue(key string, value float64) {
 	s.Gauge[key] = value
 }
 
-func (s *MemoryStorage) UpdateCounterMetric(key string) {
+func (s *MemoryStorage) AddValueToCounterMetric(key string, value int64) {
 	val, ok := s.GetCounterMetric(key)
 
 	if !ok {
-		val = 1
+		val = value
 	} else {
-		val++
+		val += value
 	}
 
 	s.Counter[key] = val

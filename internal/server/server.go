@@ -110,7 +110,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Data received and updated! Key %s, metricaName %s, metricValue %s \n", keyName, metricName, metricValue)
-	s.storage.UpdateMetrics(keyName, metricName, i)
+	s.storage.UpdateMetricsValue(keyName, metricName, i)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -124,7 +124,7 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 
 	metricName := chi.URLParam(r, "metricName")
 
-	val, ok := s.storage.GetMetrics(metricType, metricName)
+	val, ok := s.storage.GetMetricValue(metricType, metricName)
 
 	if !ok {
 		log.Printf("Can't get mertic value for %s \n", metricName)

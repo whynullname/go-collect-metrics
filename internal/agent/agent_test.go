@@ -69,7 +69,7 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, ok := agInstance.storage.GetMetrics(test.dataType, test.dataName)
+			val, ok := agInstance.storage.GetMetricValue(test.dataType, test.dataName)
 			assert.Equal(t, test.shouldDataExist, ok)
 
 			if !ok {
