@@ -8,6 +8,7 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 func TestUpdateMetrics(t *testing.T) {
@@ -15,7 +16,8 @@ func TestUpdateMetrics(t *testing.T) {
 	runtime.ReadMemStats(&memStats)
 	repo := inmemory.NewInMemoryRepository()
 	cfg := config.NewAgentConfig()
-	agInstance := NewAgent(&memStats, repo, cfg)
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+	agInstance := NewAgent(&memStats, metricsUseCase, cfg)
 	agInstance.UpdateMetrics()
 	tests := []struct {
 		name            string
@@ -70,11 +72,12 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			//TODO: в фиче это переделаю думаю
-			val, ok := agInstance.repository.GetMetricValue(test.dataType, test.dataName)
-			assert.Equal(t, test.shouldDataExist, ok)
+			val, err := agInstance.metricsUseCase.TryGetMetricValue(test.dataType, test.dataName)
 
-			if !ok {
+			if test.shouldDataExist {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
 				return
 			}
 

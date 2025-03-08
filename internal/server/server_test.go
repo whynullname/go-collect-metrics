@@ -14,6 +14,7 @@ import (
 	configAgent "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	configServer "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 func TestUpdateData(t *testing.T) {
@@ -77,7 +78,8 @@ func TestUpdateData(t *testing.T) {
 
 	repo := inmemory.NewInMemoryRepository()
 	cfg := configServer.NewServerConfig()
-	serv := NewServer(repo, cfg)
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+	serv := NewServer(metricsUseCase, cfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 
@@ -101,8 +103,9 @@ func TestGetData(t *testing.T) {
 	repo := inmemory.NewInMemoryRepository()
 	agentCfg := configAgent.NewAgentConfig()
 	serverCfg := configServer.NewServerConfig()
-	agent := agent.NewAgent(&memStats, repo, agentCfg)
-	serv := NewServer(repo, serverCfg)
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+	agent := agent.NewAgent(&memStats, metricsUseCase, agentCfg)
+	serv := NewServer(metricsUseCase, serverCfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 	agent.UpdateMetrics()

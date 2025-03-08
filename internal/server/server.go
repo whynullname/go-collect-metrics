@@ -10,12 +10,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 type Server struct {
-	repository repository.Repository
-	Config     *config.ServerConfig
-	Router     chi.Router
+	metricsUseCase *metrics.MetricsUseCase
+	Config         *config.ServerConfig
+	Router         chi.Router
 }
 
 const (
@@ -44,10 +45,10 @@ const (
 </html>`
 )
 
-func NewServer(repository repository.Repository, config *config.ServerConfig) *Server {
+func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConfig) *Server {
 	serverInstance := &Server{
-		repository: repository,
-		Config:     config,
+		metricsUseCase: metricsUseCase,
+		Config:         config,
 	}
 	serverInstance.Router = serverInstance.createRouter()
 	return serverInstance
@@ -76,7 +77,26 @@ func (s *Server) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = tmpl.Execute(w, s.repository)
+	gaugeMetrics, err := s.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
+
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	counterMetrics, err := s.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	data := map[string]any{
+		"Gauge":   gaugeMetrics,
+		"Counter": counterMetrics,
+	}
+
+	err = tmpl.Execute(w, data)
 
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -94,61 +114,30 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	metricType := chi.URLParam(r, "key")
-
-	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	metricName := chi.URLParam(r, "merticName")
 	metricValue := chi.URLParam(r, "metricValue")
+	log.Printf("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
 
-	i, err := strconv.ParseFloat(metricValue, 64)
+	err := s.metricsUseCase.TryUpdateMetricValue(metricType, metricName, metricValue)
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	//TODO: Refactor this
-	log.Printf("Data received and updated! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
-
-	switch metricType {
-	case repository.CounterMetricKey:
-		s.repository.UpdateCounterMetricValue(metricName, int64(i))
-		break
-	case repository.GaugeMetricKey:
-		s.repository.UpdateGaugeMetricValue(metricName, i)
-		break
-	}
 	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
-	log.Printf("Try get metric type %s \n", metricType)
-	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
 	metricName := chi.URLParam(r, "metricName")
 
-	val := float64(0)
-	ok := false
-	switch metricType {
-	case repository.CounterMetricKey:
-		val, ok = s.repository.TryGetCounterMetricValue(metricName)
-		break
-	case repository.GaugeMetricKey:
-		val, ok = s.repository.TryGetGaugeMetricValue(metricName)
-		break
-	}
+	val, err := s.metricsUseCase.TryGetMetricValue(metricType, metricName)
 
-	if !ok {
-		log.Printf("Can't get mertic value for %s \n", metricName)
-		w.WriteHeader(http.StatusNotFound)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	io.WriteString(w, strconv.FormatFloat(val, 'f', -1, 64))
+	io.WriteString(w, strconv.FormatFloat(val.(float64), 'f', -1, 64))
 }
