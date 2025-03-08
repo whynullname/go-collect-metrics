@@ -9,21 +9,22 @@ import (
 	"time"
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
-	storage "github.com/whynullname/go-collect-metrics/internal/storage"
+	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 type Agent struct {
-	memStats *runtime.MemStats
-	storage  *storage.MemoryStorage
-	Config   *config.AgentConfig
-	Client   *http.Client
+	memStats       *runtime.MemStats
+	Config         *config.AgentConfig
+	Client         *http.Client
+	metricsUseCase *metrics.MetricsUseCase
 }
 
-func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage, config *config.AgentConfig) *Agent {
+func NewAgent(memStats *runtime.MemStats, metricUseCase *metrics.MetricsUseCase, config *config.AgentConfig) *Agent {
 	return &Agent{
-		memStats: memStats,
-		storage:  storage,
-		Config:   config,
+		memStats:       memStats,
+		metricsUseCase: metricUseCase,
+		Config:         config,
 		Client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -33,48 +34,57 @@ func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage, config
 func (a *Agent) UpdateMetrics() {
 	memStats := a.memStats
 	runtime.ReadMemStats(memStats)
-	a.storage.SetGaugeMetricValue("Alloc", float64(memStats.Alloc))
-	a.storage.SetGaugeMetricValue("Frees", float64(memStats.Frees))
-	a.storage.SetGaugeMetricValue("BuckHashSys", float64(memStats.BuckHashSys))
-	a.storage.SetGaugeMetricValue("GCCPUFraction", float64(memStats.GCCPUFraction))
-	a.storage.SetGaugeMetricValue("GCSys", float64(memStats.GCSys))
-	a.storage.SetGaugeMetricValue("HeapAlloc", float64(memStats.HeapAlloc))
-	a.storage.SetGaugeMetricValue("HeapIdle", float64(memStats.HeapIdle))
-	a.storage.SetGaugeMetricValue("HeapInuse", float64(memStats.HeapInuse))
-	a.storage.SetGaugeMetricValue("HeapObjects", float64(memStats.HeapObjects))
-	a.storage.SetGaugeMetricValue("HeapReleased", float64(memStats.HeapReleased))
-	a.storage.SetGaugeMetricValue("HeapSys", float64(memStats.HeapSys))
-	a.storage.SetGaugeMetricValue("LastGC", float64(memStats.LastGC))
-	a.storage.SetGaugeMetricValue("Lookups", float64(memStats.Lookups))
-	a.storage.SetGaugeMetricValue("MCacheSys", float64(memStats.MCacheSys))
-	a.storage.SetGaugeMetricValue("Mallocs", float64(memStats.Mallocs))
-	a.storage.SetGaugeMetricValue("NextGC", float64(memStats.NextGC))
-	a.storage.SetGaugeMetricValue("NumForcedGC", float64(memStats.NumForcedGC))
-	a.storage.SetGaugeMetricValue("NumGC", float64(memStats.NumGC))
-	a.storage.SetGaugeMetricValue("OtherSys", float64(memStats.OtherSys))
-	a.storage.SetGaugeMetricValue("PauseTotalNs", float64(memStats.PauseTotalNs))
-	a.storage.SetGaugeMetricValue("StackInuse", float64(memStats.StackInuse))
-	a.storage.SetGaugeMetricValue("StackSys", float64(memStats.StackSys))
-	a.storage.SetGaugeMetricValue("Sys", float64(memStats.Sys))
-	a.storage.SetGaugeMetricValue("TotalAlloc", float64(memStats.TotalAlloc))
-	a.storage.SetGaugeMetricValue("RandomValue", rand.Float64())
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Alloc", float64(memStats.Alloc))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Frees", float64(memStats.Frees))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "BuckHashSys", float64(memStats.BuckHashSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "GCCPUFraction", float64(memStats.GCCPUFraction))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "GCSys", float64(memStats.GCSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapAlloc", float64(memStats.HeapAlloc))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapIdle", float64(memStats.HeapIdle))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapInuse", float64(memStats.HeapInuse))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapObjects", float64(memStats.HeapObjects))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapReleased", float64(memStats.HeapReleased))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "HeapSys", float64(memStats.HeapSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "LastGC", float64(memStats.LastGC))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Lookups", float64(memStats.Lookups))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "MCacheSys", float64(memStats.MCacheSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Mallocs", float64(memStats.Mallocs))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "NextGC", float64(memStats.NextGC))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "NumForcedGC", float64(memStats.NumForcedGC))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "NumGC", float64(memStats.NumGC))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "OtherSys", float64(memStats.OtherSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "PauseTotalNs", float64(memStats.PauseTotalNs))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "StackInuse", float64(memStats.StackInuse))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "StackSys", float64(memStats.StackSys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Sys", float64(memStats.Sys))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "TotalAlloc", float64(memStats.TotalAlloc))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "RandomValue", rand.Float64())
 
-	a.storage.AddValueToCounterMetric("PollCount", 1)
+	a.metricsUseCase.TryUpdateMetricValue(repository.CounterMetricKey, "PollCount", int64(1))
 }
 
 func (a *Agent) SendMetrics() {
-	for k, v := range a.storage.GetAllGaugeMetrics() {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%.2f", a.Config.EndPointAdress, storage.GaugeKey, k, v)
-		resp, err := a.Client.Post(url, "text/plain", nil)
-		resp.Body.Close()
-		if err != nil {
-			log.Printf("Can't send post method in %s ! Err %s \n", url, err)
-			return
-		}
+
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	for k, v := range a.storage.GetAllCounterMetrics() {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.Config.EndPointAdress, storage.CounterKey, k, v)
+	a.sendPostResponseWithMetrics(gaugeMetrics)
+
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	a.sendPostResponseWithMetrics(counterMetrics)
+}
+
+func (a *Agent) sendPostResponseWithMetrics(metrics map[string]any) {
+	for k, v := range metrics {
+		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.Config.EndPointAdress, repository.CounterMetricKey, k, v)
 		resp, err := a.Client.Post(url, "text/plain", nil)
 		resp.Body.Close()
 		if err != nil {

@@ -7,16 +7,20 @@ import (
 
 	"github.com/whynullname/go-collect-metrics/internal/agent"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
-	"github.com/whynullname/go-collect-metrics/internal/storage"
+	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 func main() {
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
 	log.Printf("Start agent, try work with server in %s \n", cfg.EndPointAdress)
+
 	memStats := runtime.MemStats{}
-	storage := storage.NewStorage()
-	instance := agent.NewAgent(&memStats, storage, cfg)
+	repo := inmemory.NewInMemoryRepository()
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+
+	instance := agent.NewAgent(&memStats, metricsUseCase, cfg)
 	updateAndSendMetrics(instance)
 }
 

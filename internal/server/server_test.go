@@ -13,7 +13,8 @@ import (
 	"github.com/whynullname/go-collect-metrics/internal/agent"
 	configAgent "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	configServer "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
-	"github.com/whynullname/go-collect-metrics/internal/storage"
+	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 func TestUpdateData(t *testing.T) {
@@ -75,9 +76,10 @@ func TestUpdateData(t *testing.T) {
 		},
 	}
 
-	storage := storage.NewStorage()
+	repo := inmemory.NewInMemoryRepository()
 	cfg := configServer.NewServerConfig()
-	serv := NewServer(storage, cfg)
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+	serv := NewServer(metricsUseCase, cfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 
@@ -98,11 +100,12 @@ func TestUpdateData(t *testing.T) {
 
 func TestGetData(t *testing.T) {
 	memStats := runtime.MemStats{}
-	dataStorage := storage.NewStorage()
+	repo := inmemory.NewInMemoryRepository()
 	agentCfg := configAgent.NewAgentConfig()
 	serverCfg := configServer.NewServerConfig()
-	agent := agent.NewAgent(&memStats, dataStorage, agentCfg)
-	serv := NewServer(dataStorage, serverCfg)
+	metricsUseCase := metrics.NewMetricUseCase(repo)
+	agent := agent.NewAgent(&memStats, metricsUseCase, agentCfg)
+	serv := NewServer(metricsUseCase, serverCfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 	agent.UpdateMetrics()
@@ -139,14 +142,14 @@ func TestGetData(t *testing.T) {
 			name:       "bad data type",
 			method:     http.MethodGet,
 			url:        "/value/badDataType/someData",
-			headerCode: http.StatusNotFound,
+			headerCode: http.StatusBadRequest,
 			response:   "",
 		},
 		{
 			name:       "bad data name",
 			method:     http.MethodGet,
 			url:        "/value/gauge/badDataName",
-			headerCode: http.StatusNotFound,
+			headerCode: http.StatusBadRequest,
 			response:   "",
 		},
 	}
