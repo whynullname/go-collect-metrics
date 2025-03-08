@@ -142,14 +142,14 @@ func TestGetData(t *testing.T) {
 			name:       "bad data type",
 			method:     http.MethodGet,
 			url:        "/value/badDataType/someData",
-			headerCode: http.StatusNotFound,
+			headerCode: http.StatusBadRequest,
 			response:   "",
 		},
 		{
 			name:       "bad data name",
 			method:     http.MethodGet,
 			url:        "/value/gauge/badDataName",
-			headerCode: http.StatusNotFound,
+			headerCode: http.StatusBadRequest,
 			response:   "",
 		},
 	}

@@ -3,6 +3,7 @@ package metrics
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 )
@@ -20,21 +21,32 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName string, value any) error {
 	switch metricType {
 	case repository.CounterMetricKey:
-		intValue, err := value.(int64)
-
-		if !err {
-			return fmt.Errorf("metric type %s can be only int64", metricType)
+		switch v := value.(type) {
+		case int64:
+			m.repository.UpdateCounterMetricValue(metricName, v)
+		case string:
+			intValue, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return fmt.Errorf("metric type %s can be only float64", metricType)
+			}
+			m.repository.UpdateCounterMetricValue(metricName, intValue)
+		default:
+			return fmt.Errorf("metric type %s can be only float64", metricType)
 		}
-
-		m.repository.UpdateCounterMetricValue(metricName, intValue)
 	case repository.GaugeMetricKey:
-		floatValue, err := value.(float64)
-
-		if !err {
+		switch v := value.(type) {
+		case float64:
+			m.repository.UpdateGaugeMetricValue(metricName, v)
+		case string:
+			floatValue, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return fmt.Errorf("metric type %s can be only float64", metricType)
+			}
+			m.repository.UpdateGaugeMetricValue(metricName, floatValue)
+		default:
 			return fmt.Errorf("metric type %s can be only float64", metricType)
 		}
 
-		m.repository.UpdateGaugeMetricValue(metricName, floatValue)
 	default:
 		return errors.New("unsupported metric type")
 	}

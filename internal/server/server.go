@@ -121,6 +121,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	err := s.metricsUseCase.TryUpdateMetricValue(metricType, metricName, metricValue)
 
 	if err != nil {
+		log.Printf("Error with get metrics: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

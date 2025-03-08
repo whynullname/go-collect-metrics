@@ -60,7 +60,7 @@ func (a *Agent) UpdateMetrics() {
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "TotalAlloc", float64(memStats.TotalAlloc))
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "RandomValue", rand.Float64())
 
-	a.metricsUseCase.TryUpdateMetricValue(repository.CounterMetricKey, "PollCount", 1)
+	a.metricsUseCase.TryUpdateMetricValue(repository.CounterMetricKey, "PollCount", int64(1))
 }
 
 func (a *Agent) SendMetrics() {

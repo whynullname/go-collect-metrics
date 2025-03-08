@@ -24,7 +24,7 @@ func TestUpdateMetrics(t *testing.T) {
 		dataType        string
 		dataName        string
 		shouldDataExist bool
-		dataValue       float64
+		dataValue       any
 	}{
 		{
 			name:            "Positive test data #1",
@@ -45,7 +45,7 @@ func TestUpdateMetrics(t *testing.T) {
 			dataType:        repository.CounterMetricKey,
 			dataName:        "PollCount",
 			shouldDataExist: true,
-			dataValue:       1,
+			dataValue:       int64(1),
 		},
 		{
 			name:            "Try get non-existent counter data",
