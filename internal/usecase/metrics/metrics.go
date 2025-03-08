@@ -26,9 +26,11 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 			m.repository.UpdateCounterMetricValue(metricName, v)
 		case string:
 			intValue, err := strconv.ParseInt(v, 10, 64)
+
 			if err != nil {
 				return fmt.Errorf("metric type %s can be only float64", metricType)
 			}
+
 			m.repository.UpdateCounterMetricValue(metricName, intValue)
 		default:
 			return fmt.Errorf("metric type %s can be only float64", metricType)
@@ -39,14 +41,15 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 			m.repository.UpdateGaugeMetricValue(metricName, v)
 		case string:
 			floatValue, err := strconv.ParseFloat(v, 64)
+
 			if err != nil {
 				return fmt.Errorf("metric type %s can be only float64", metricType)
+
 			}
 			m.repository.UpdateGaugeMetricValue(metricName, floatValue)
 		default:
 			return fmt.Errorf("metric type %s can be only float64", metricType)
 		}
-
 	default:
 		return errors.New("unsupported metric type")
 	}
