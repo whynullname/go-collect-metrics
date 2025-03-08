@@ -64,14 +64,13 @@ func (a *Agent) UpdateMetrics() {
 }
 
 func (a *Agent) SendMetrics() {
-
 	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	a.sendPostResponseWithMetrics(gaugeMetrics)
+	a.sendPostResponseWithMetrics(repository.GaugeMetricKey, gaugeMetrics)
 
 	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
 
@@ -79,12 +78,21 @@ func (a *Agent) SendMetrics() {
 		log.Fatal(err)
 	}
 
-	a.sendPostResponseWithMetrics(counterMetrics)
+	a.sendPostResponseWithMetrics(repository.CounterMetricKey, counterMetrics)
 }
 
-func (a *Agent) sendPostResponseWithMetrics(metrics map[string]any) {
+func (a *Agent) sendPostResponseWithMetrics(metricKey string, metrics map[string]any) {
 	for k, v := range metrics {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.Config.EndPointAdress, repository.CounterMetricKey, k, v)
+		metricValue := ""
+
+		switch value := v.(type) {
+		case int64:
+			metricValue = fmt.Sprintf("%d", value)
+		case float64:
+			metricValue = fmt.Sprintf("%.2f", value)
+		}
+
+		url := fmt.Sprintf("http://%s/update/%s/%s/%s", a.Config.EndPointAdress, metricKey, k, metricValue)
 		resp, err := a.Client.Post(url, "text/plain", nil)
 		resp.Body.Close()
 		if err != nil {

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -136,9 +137,14 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	val, err := s.metricsUseCase.TryGetMetricValue(metricType, metricName)
 
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	io.WriteString(w, strconv.FormatFloat(val.(float64), 'f', -1, 64))
+	switch value := val.(type) {
+	case int64:
+		io.WriteString(w, fmt.Sprintf("%d", value))
+	case float64:
+		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
+	}
 }
