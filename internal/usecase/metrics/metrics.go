@@ -19,42 +19,27 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 }
 
 func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName string, value any) error {
-	switch metricType {
-	case repository.CounterMetricKey:
-		switch v := value.(type) {
-		case int64:
-			m.repository.UpdateCounterMetricValue(metricName, v)
-		case string:
-			intValue, err := strconv.ParseInt(v, 10, 64)
+	if metricType == repository.CounterMetricKey {
+		metricValue, err := toInt64(value)
 
-			if err != nil {
-				return fmt.Errorf("metric type %s can be only float64", metricType)
-			}
-
-			m.repository.UpdateCounterMetricValue(metricName, intValue)
-		default:
-			return fmt.Errorf("metric type %s can be only float64", metricType)
+		if err != nil {
+			return err
 		}
-	case repository.GaugeMetricKey:
-		switch v := value.(type) {
-		case float64:
-			m.repository.UpdateGaugeMetricValue(metricName, v)
-		case string:
-			floatValue, err := strconv.ParseFloat(v, 64)
 
-			if err != nil {
-				return fmt.Errorf("metric type %s can be only float64", metricType)
+		m.repository.UpdateCounterMetricValue(metricName, metricValue)
+		return nil
+	} else if metricType == repository.GaugeMetricKey {
+		metricValue, err := toFloat64(value)
 
-			}
-			m.repository.UpdateGaugeMetricValue(metricName, floatValue)
-		default:
-			return fmt.Errorf("metric type %s can be only float64", metricType)
+		if err != nil {
+			return err
 		}
-	default:
-		return errors.New("unsupported metric type")
+
+		m.repository.UpdateGaugeMetricValue(metricName, metricValue)
+		return nil
 	}
 
-	return nil
+	return errors.New("unsupported metric type")
 }
 
 func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string) (any, error) {
@@ -85,18 +70,44 @@ func (m *MetricsUseCase) GetAllMetricsByType(metricType string) (map[string]any,
 	case repository.CounterMetricKey:
 		metrics := m.repository.GetAllCounterMetrics()
 		result := make(map[string]any)
+
 		for k, v := range metrics {
 			result[k] = v
 		}
+
 		return result, nil
 	case repository.GaugeMetricKey:
 		metrics := m.repository.GetAllGaugeMetrics()
 		result := make(map[string]any)
+
 		for k, v := range metrics {
 			result[k] = v
 		}
+
 		return result, nil
 	default:
 		return nil, errors.New("unsupported metric type")
+	}
+}
+
+func toInt64(value any) (int64, error) {
+	switch v := value.(type) {
+	case int64:
+		return v, nil
+	case string:
+		return strconv.ParseInt(v, 10, 64)
+	default:
+		return 0, fmt.Errorf("unsupported type: %T", v)
+	}
+}
+
+func toFloat64(value any) (float64, error) {
+	switch v := value.(type) {
+	case float64:
+		return v, nil
+	case string:
+		return strconv.ParseFloat(v, 64)
+	default:
+		return 0, fmt.Errorf("unsupported type: %T", v)
 	}
 }
