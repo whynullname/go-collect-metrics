@@ -6,15 +6,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
-	"github.com/whynullname/go-collect-metrics/internal/storage"
+	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 )
 
 func TestUpdateMetrics(t *testing.T) {
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
-	data := storage.NewStorage()
+	repo := inmemory.NewInMemoryRepository()
 	cfg := config.NewAgentConfig()
-	agInstance := NewAgent(&memStats, data, cfg)
+	agInstance := NewAgent(&memStats, repo, cfg)
 	agInstance.UpdateMetrics()
 	tests := []struct {
 		name            string
@@ -25,35 +26,35 @@ func TestUpdateMetrics(t *testing.T) {
 	}{
 		{
 			name:            "Positive test data #1",
-			dataType:        storage.GaugeKey,
+			dataType:        repository.GaugeMetricKey,
 			dataName:        "Alloc",
 			shouldDataExist: true,
 			dataValue:       float64(memStats.Alloc),
 		},
 		{
 			name:            "Positive test gauge data #2",
-			dataType:        storage.GaugeKey,
+			dataType:        repository.GaugeMetricKey,
 			dataName:        "NextGC",
 			shouldDataExist: true,
 			dataValue:       float64(memStats.NextGC),
 		},
 		{
 			name:            "Positiove test counter data #1",
-			dataType:        storage.CounterKey,
+			dataType:        repository.CounterMetricKey,
 			dataName:        "PollCount",
 			shouldDataExist: true,
 			dataValue:       1,
 		},
 		{
 			name:            "Try get non-existent counter data",
-			dataType:        storage.CounterKey,
+			dataType:        repository.CounterMetricKey,
 			dataName:        "TestDataName",
 			shouldDataExist: false,
 			dataValue:       0,
 		},
 		{
 			name:            "Try get non-existent gauge data",
-			dataType:        storage.GaugeKey,
+			dataType:        repository.GaugeMetricKey,
 			dataName:        "TestDataName",
 			shouldDataExist: false,
 			dataValue:       0,
@@ -69,7 +70,8 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, ok := agInstance.storage.GetMetricValue(test.dataType, test.dataName)
+			//TODO: в фиче это переделаю думаю
+			val, ok := agInstance.repository.GetMetricValue(test.dataType, test.dataName)
 			assert.Equal(t, test.shouldDataExist, ok)
 
 			if !ok {

@@ -9,21 +9,21 @@ import (
 	"time"
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
-	storage "github.com/whynullname/go-collect-metrics/internal/storage"
+	"github.com/whynullname/go-collect-metrics/internal/repository"
 )
 
 type Agent struct {
-	memStats *runtime.MemStats
-	storage  *storage.MemoryStorage
-	Config   *config.AgentConfig
-	Client   *http.Client
+	memStats   *runtime.MemStats
+	repository repository.Repository
+	Config     *config.AgentConfig
+	Client     *http.Client
 }
 
-func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage, config *config.AgentConfig) *Agent {
+func NewAgent(memStats *runtime.MemStats, repository repository.Repository, config *config.AgentConfig) *Agent {
 	return &Agent{
-		memStats: memStats,
-		storage:  storage,
-		Config:   config,
+		memStats:   memStats,
+		repository: repository,
+		Config:     config,
 		Client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -33,38 +33,38 @@ func NewAgent(memStats *runtime.MemStats, storage *storage.MemoryStorage, config
 func (a *Agent) UpdateMetrics() {
 	memStats := a.memStats
 	runtime.ReadMemStats(memStats)
-	a.storage.SetGaugeMetricValue("Alloc", float64(memStats.Alloc))
-	a.storage.SetGaugeMetricValue("Frees", float64(memStats.Frees))
-	a.storage.SetGaugeMetricValue("BuckHashSys", float64(memStats.BuckHashSys))
-	a.storage.SetGaugeMetricValue("GCCPUFraction", float64(memStats.GCCPUFraction))
-	a.storage.SetGaugeMetricValue("GCSys", float64(memStats.GCSys))
-	a.storage.SetGaugeMetricValue("HeapAlloc", float64(memStats.HeapAlloc))
-	a.storage.SetGaugeMetricValue("HeapIdle", float64(memStats.HeapIdle))
-	a.storage.SetGaugeMetricValue("HeapInuse", float64(memStats.HeapInuse))
-	a.storage.SetGaugeMetricValue("HeapObjects", float64(memStats.HeapObjects))
-	a.storage.SetGaugeMetricValue("HeapReleased", float64(memStats.HeapReleased))
-	a.storage.SetGaugeMetricValue("HeapSys", float64(memStats.HeapSys))
-	a.storage.SetGaugeMetricValue("LastGC", float64(memStats.LastGC))
-	a.storage.SetGaugeMetricValue("Lookups", float64(memStats.Lookups))
-	a.storage.SetGaugeMetricValue("MCacheSys", float64(memStats.MCacheSys))
-	a.storage.SetGaugeMetricValue("Mallocs", float64(memStats.Mallocs))
-	a.storage.SetGaugeMetricValue("NextGC", float64(memStats.NextGC))
-	a.storage.SetGaugeMetricValue("NumForcedGC", float64(memStats.NumForcedGC))
-	a.storage.SetGaugeMetricValue("NumGC", float64(memStats.NumGC))
-	a.storage.SetGaugeMetricValue("OtherSys", float64(memStats.OtherSys))
-	a.storage.SetGaugeMetricValue("PauseTotalNs", float64(memStats.PauseTotalNs))
-	a.storage.SetGaugeMetricValue("StackInuse", float64(memStats.StackInuse))
-	a.storage.SetGaugeMetricValue("StackSys", float64(memStats.StackSys))
-	a.storage.SetGaugeMetricValue("Sys", float64(memStats.Sys))
-	a.storage.SetGaugeMetricValue("TotalAlloc", float64(memStats.TotalAlloc))
-	a.storage.SetGaugeMetricValue("RandomValue", rand.Float64())
+	a.repository.UpdateGaugeMetricValue("Alloc", float64(memStats.Alloc))
+	a.repository.UpdateGaugeMetricValue("Frees", float64(memStats.Frees))
+	a.repository.UpdateGaugeMetricValue("BuckHashSys", float64(memStats.BuckHashSys))
+	a.repository.UpdateGaugeMetricValue("GCCPUFraction", float64(memStats.GCCPUFraction))
+	a.repository.UpdateGaugeMetricValue("GCSys", float64(memStats.GCSys))
+	a.repository.UpdateGaugeMetricValue("HeapAlloc", float64(memStats.HeapAlloc))
+	a.repository.UpdateGaugeMetricValue("HeapIdle", float64(memStats.HeapIdle))
+	a.repository.UpdateGaugeMetricValue("HeapInuse", float64(memStats.HeapInuse))
+	a.repository.UpdateGaugeMetricValue("HeapObjects", float64(memStats.HeapObjects))
+	a.repository.UpdateGaugeMetricValue("HeapReleased", float64(memStats.HeapReleased))
+	a.repository.UpdateGaugeMetricValue("HeapSys", float64(memStats.HeapSys))
+	a.repository.UpdateGaugeMetricValue("LastGC", float64(memStats.LastGC))
+	a.repository.UpdateGaugeMetricValue("Lookups", float64(memStats.Lookups))
+	a.repository.UpdateGaugeMetricValue("MCacheSys", float64(memStats.MCacheSys))
+	a.repository.UpdateGaugeMetricValue("Mallocs", float64(memStats.Mallocs))
+	a.repository.UpdateGaugeMetricValue("NextGC", float64(memStats.NextGC))
+	a.repository.UpdateGaugeMetricValue("NumForcedGC", float64(memStats.NumForcedGC))
+	a.repository.UpdateGaugeMetricValue("NumGC", float64(memStats.NumGC))
+	a.repository.UpdateGaugeMetricValue("OtherSys", float64(memStats.OtherSys))
+	a.repository.UpdateGaugeMetricValue("PauseTotalNs", float64(memStats.PauseTotalNs))
+	a.repository.UpdateGaugeMetricValue("StackInuse", float64(memStats.StackInuse))
+	a.repository.UpdateGaugeMetricValue("StackSys", float64(memStats.StackSys))
+	a.repository.UpdateGaugeMetricValue("Sys", float64(memStats.Sys))
+	a.repository.UpdateGaugeMetricValue("TotalAlloc", float64(memStats.TotalAlloc))
+	a.repository.UpdateGaugeMetricValue("RandomValue", rand.Float64())
 
-	a.storage.AddValueToCounterMetric("PollCount", 1)
+	a.repository.UpdateCounterMetricValue("PollCount", 1)
 }
 
 func (a *Agent) SendMetrics() {
-	for k, v := range a.storage.GetAllGaugeMetrics() {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%.2f", a.Config.EndPointAdress, storage.GaugeKey, k, v)
+	for k, v := range a.repository.GetAllGaugeMetrics() {
+		url := fmt.Sprintf("http://%s/update/%s/%s/%.2f", a.Config.EndPointAdress, repository.GaugeMetricKey, k, v)
 		resp, err := a.Client.Post(url, "text/plain", nil)
 		resp.Body.Close()
 		if err != nil {
@@ -73,8 +73,8 @@ func (a *Agent) SendMetrics() {
 		}
 	}
 
-	for k, v := range a.storage.GetAllCounterMetrics() {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.Config.EndPointAdress, storage.CounterKey, k, v)
+	for k, v := range a.repository.GetAllCounterMetrics() {
+		url := fmt.Sprintf("http://%s/update/%s/%s/%d", a.Config.EndPointAdress, repository.CounterMetricKey, k, v)
 		resp, err := a.Client.Post(url, "text/plain", nil)
 		resp.Body.Close()
 		if err != nil {
