@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
@@ -12,7 +13,8 @@ func TestUpdateMetrics(t *testing.T) {
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
 	data := storage.NewStorage()
-	agInstance := NewAgent(&memStats, data, "localhost:8080")
+	cfg := config.NewAgentConfig()
+	agInstance := NewAgent(&memStats, data, cfg)
 	agInstance.UpdateMetrics()
 	tests := []struct {
 		name            string
@@ -67,7 +69,7 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, ok := agInstance.storage.GetData(test.dataType, test.dataName)
+			val, ok := agInstance.storage.GetMetricValue(test.dataType, test.dataName)
 			assert.Equal(t, test.shouldDataExist, ok)
 
 			if !ok {

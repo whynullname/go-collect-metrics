@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/whynullname/go-collect-metrics/internal/agent"
+	configAgent "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
+	configServer "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/storage"
 )
 
@@ -74,7 +76,8 @@ func TestUpdateData(t *testing.T) {
 	}
 
 	storage := storage.NewStorage()
-	serv := NewServer(storage, "localhost:8080")
+	cfg := configServer.NewServerConfig()
+	serv := NewServer(storage, cfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 
@@ -96,8 +99,10 @@ func TestUpdateData(t *testing.T) {
 func TestGetData(t *testing.T) {
 	memStats := runtime.MemStats{}
 	dataStorage := storage.NewStorage()
-	agent := agent.NewAgent(&memStats, dataStorage, ":8080")
-	serv := NewServer(dataStorage, ":8080")
+	agentCfg := configAgent.NewAgentConfig()
+	serverCfg := configServer.NewServerConfig()
+	agent := agent.NewAgent(&memStats, dataStorage, agentCfg)
+	serv := NewServer(dataStorage, serverCfg)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 	agent.UpdateMetrics()
