@@ -140,5 +140,10 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, strconv.FormatFloat(val.(float64), 'f', -1, 64))
+	switch v := val.(type) {
+	case float64:
+		io.WriteString(w, strconv.FormatFloat(v, 'f', -1, 64))
+	case int64:
+		io.WriteString(w, strconv.FormatInt(v, 10))
+	}
 }
