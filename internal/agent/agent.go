@@ -83,7 +83,16 @@ func (a *Agent) SendMetrics() {
 
 func (a *Agent) sendPostResponseWithMetrics(metricKey string, metrics map[string]any) {
 	for k, v := range metrics {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%v", a.Config.EndPointAdress, metricKey, k, v)
+		metricValue := ""
+
+		switch value := v.(type) {
+		case int64:
+			metricValue = fmt.Sprintf("%d", value)
+		case float64:
+			metricValue = fmt.Sprintf("%.2f", value)
+		}
+
+		url := fmt.Sprintf("http://%s/update/%s/%s/%s", a.Config.EndPointAdress, metricKey, k, metricValue)
 		resp, err := a.Client.Post(url, "text/plain", nil)
 		resp.Body.Close()
 		if err != nil {

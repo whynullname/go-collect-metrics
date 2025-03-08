@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
@@ -140,5 +141,10 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, fmt.Sprint(val))
+	switch value := val.(type) {
+	case int64:
+		io.WriteString(w, fmt.Sprintf("%d", value))
+	case float64:
+		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
+	}
 }
