@@ -1,11 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
@@ -136,14 +136,9 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	val, err := s.metricsUseCase.TryGetMetricValue(metricType, metricName)
 
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	switch v := val.(type) {
-	case float64:
-		io.WriteString(w, strconv.FormatFloat(v, 'f', -1, 64))
-	case int64:
-		io.WriteString(w, strconv.FormatInt(v, 10))
-	}
+	io.WriteString(w, fmt.Sprint(val))
 }
