@@ -94,10 +94,10 @@ func (a *Agent) sendPostResponseWithMetrics(metricKey string, metrics map[string
 
 		url := fmt.Sprintf("http://%s/update/%s/%s/%s", a.Config.EndPointAdress, metricKey, k, metricValue)
 		resp, err := a.Client.Post(url, "text/plain", nil)
-		resp.Body.Close()
 		if err != nil {
 			log.Printf("Can't send post method in %s ! Err %s \n", url, err)
 			return
 		}
+		resp.Body.Close()
 	}
 }
