@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
+	"github.com/whynullname/go-collect-metrics/internal/logger"
+	"github.com/whynullname/go-collect-metrics/internal/middlewares"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -51,12 +53,19 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 		metricsUseCase: metricsUseCase,
 		Config:         config,
 	}
+	err := logger.Initialize("info")
+
+	if err != nil {
+		log.Fatalf("Fatal initialize logger")
+	}
+
 	serverInstance.Router = serverInstance.createRouter()
 	return serverInstance
 }
 
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
+	r.Use(middlewares.Logging)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.GetAllMetrics)
@@ -109,7 +118,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "text/plain" {
-		log.Println("Content type not text/plain, return!")
+		//log.Println("Content type not text/plain, return!")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -117,7 +126,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "key")
 	metricName := chi.URLParam(r, "merticName")
 	metricValue := chi.URLParam(r, "metricValue")
-	log.Printf("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
+	//log.Printf("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
 
 	err := s.metricsUseCase.TryUpdateMetricValue(metricType, metricName, metricValue)
 
