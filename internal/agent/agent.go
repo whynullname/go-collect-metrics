@@ -83,7 +83,7 @@ func (a *Agent) SendMetrics() {
 	a.sendPostResponseWithMetrics(repository.CounterMetricKey, counterMetrics)
 }
 
-func (a *Agent) SendMetricsByJson() {
+func (a *Agent) SendMetricsByJSON() {
 	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
 
 	if err != nil {
@@ -92,12 +92,12 @@ func (a *Agent) SendMetricsByJson() {
 
 	for metricName, metricValue := range gaugeMetrics {
 		floatValue, _ := metricValue.(float64)
-		reqJson := repository.MetricsJson{
+		reqJSON := repository.MetricsJSON{
 			ID:    metricName,
 			MType: repository.GaugeMetricKey,
 			Value: &floatValue,
 		}
-		a.sendJson(reqJson)
+		a.sendJSON(reqJSON)
 	}
 
 	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
@@ -108,18 +108,18 @@ func (a *Agent) SendMetricsByJson() {
 
 	for metricName, metricValue := range counterMetrics {
 		intValue, _ := metricValue.(int64)
-		reqJson := repository.MetricsJson{
+		reqJSON := repository.MetricsJSON{
 			ID:    metricName,
 			MType: repository.CounterMetricKey,
 			Delta: &intValue,
 		}
-		a.sendJson(reqJson)
+		a.sendJSON(reqJSON)
 	}
 }
 
-func (a *Agent) sendJson(repoJson repository.MetricsJson) {
+func (a *Agent) sendJSON(repoJSON repository.MetricsJSON) {
 	var buf bytes.Buffer
-	j, err := json.Marshal(repoJson)
+	j, err := json.Marshal(repoJSON)
 	if err != nil {
 		return
 	}

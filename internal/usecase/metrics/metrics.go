@@ -42,7 +42,7 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 	return errors.New("unsupported metric type")
 }
 
-func (m *MetricsUseCase) TryUpdateMetricValueFromJson(json repository.MetricsJson) error {
+func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json repository.MetricsJSON) error {
 	if json.MType == repository.CounterMetricKey {
 		if json.Delta == nil {
 			return errors.New("delta for update conter metric is nil")

@@ -72,11 +72,11 @@ func (s *Server) createRouter() chi.Router {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.GetAllMetrics)
 		r.Route("/value", func(r chi.Router) {
-			r.Post("/", s.GetMetricByNameFromJson)
+			r.Post("/", s.GetMetricByNameFromJSON)
 			r.Get("/{metricType}/{metricName}", s.GetMetricByName)
 		})
 		r.Route("/update", func(r chi.Router) {
-			r.Post("/", s.UpdateMetricForJson)
+			r.Post("/", s.UpdateMetricForJSON)
 			r.Post("/{key}/{merticName}/{metricValue}", s.UpdateMetric)
 		})
 	})
@@ -147,7 +147,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) UpdateMetricForJson(w http.ResponseWriter, r *http.Request) {
+func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "application/json" {
@@ -157,15 +157,15 @@ func (s *Server) UpdateMetricForJson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Log.Infoln(r.Body)
-	var metricJson repository.MetricsJson
+	var metricJSON repository.MetricsJSON
 
-	if err := json.NewDecoder(r.Body).Decode(&metricJson); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&metricJSON); err != nil {
 		logger.Log.Infof("Error while read from body %w", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := s.metricsUseCase.TryUpdateMetricValueFromJson(metricJson)
+	err := s.metricsUseCase.TryUpdateMetricValueFromJSON(metricJSON)
 
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %s", err)
@@ -195,7 +195,8 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) GetMetricByNameFromJson(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "application/json" {
@@ -205,43 +206,41 @@ func (s *Server) GetMetricByNameFromJson(w http.ResponseWriter, r *http.Request)
 	}
 
 	var buff bytes.Buffer
-	var metricJson repository.MetricsJson
+	var metricJSON repository.MetricsJSON
 
 	if _, err := buff.ReadFrom(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := json.Unmarshal(buff.Bytes(), &metricJson); err != nil {
+	if err := json.Unmarshal(buff.Bytes(), &metricJSON); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	value, err := s.metricsUseCase.TryGetMetricValue(metricJson.MType, metricJson.ID)
+	value, err := s.metricsUseCase.TryGetMetricValue(metricJSON.MType, metricJSON.ID)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	switch metricJson.MType {
+	switch metricJSON.MType {
 	case repository.CounterMetricKey:
 		intValue, _ := value.(int64)
-		metricJson.Delta = &intValue
-		break
+		metricJSON.Delta = &intValue
 	case repository.GaugeMetricKey:
 		floatValue, _ := value.(float64)
-		metricJson.Value = &floatValue
+		metricJSON.Value = &floatValue
 	}
 
-	resp, err := json.Marshal(metricJson)
+	resp, err := json.Marshal(metricJSON)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
