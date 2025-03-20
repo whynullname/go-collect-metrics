@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -69,8 +71,14 @@ func (s *Server) createRouter() chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.GetAllMetrics)
-		r.Post("/update/{key}/{merticName}/{metricValue}", s.UpdateMetric)
-		r.Get("/value/{metricType}/{metricName}", s.GetMetricByName)
+		r.Route("/value", func(r chi.Router) {
+			r.Post("/", s.GetMetricByNameFromJson)
+			r.Get("/{metricType}/{metricName}", s.GetMetricByName)
+		})
+		r.Route("/update", func(r chi.Router) {
+			r.Post("/", s.UpdateMetricForJson)
+			r.Post("/{key}/{merticName}/{metricValue}", s.UpdateMetric)
+		})
 	})
 	return r
 }
@@ -118,7 +126,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "text/plain" {
-		//log.Println("Content type not text/plain, return!")
+		logger.Log.Info("Content type not text/plain, return!")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -126,12 +134,46 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "key")
 	metricName := chi.URLParam(r, "merticName")
 	metricValue := chi.URLParam(r, "metricValue")
-	//log.Printf("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
+	logger.Log.Infof("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
 
 	err := s.metricsUseCase.TryUpdateMetricValue(metricType, metricName, metricValue)
 
 	if err != nil {
-		log.Printf("Error with get metrics: %s", err)
+		logger.Log.Errorf("Error with update metrics: %s", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) UpdateMetricForJson(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType != "" && contentType != "application/json" {
+		logger.Log.Info("Content type not application/json, return!")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var buff bytes.Buffer
+	var metricJson repository.MetricsJson
+
+	if _, err := buff.ReadFrom(r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := json.Unmarshal(buff.Bytes(), &metricJson); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	logger.Log.Infof("Data received from json! Key %s, metricaName %s, metricValue %s \n", metricJson.MType, metricJson.ID)
+	err := s.metricsUseCase.TryUpdateMetricValueFromJson(metricJson)
+
+	if err != nil {
+		logger.Log.Errorf("Error with update metrics: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -156,4 +198,55 @@ func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	case float64:
 		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
 	}
+}
+
+func (s *Server) GetMetricByNameFromJson(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType != "" && contentType != "application/json" {
+		logger.Log.Info("Content type not application/json, return!")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var buff bytes.Buffer
+	var metricJson repository.MetricsJson
+
+	if _, err := buff.ReadFrom(r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := json.Unmarshal(buff.Bytes(), &metricJson); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	value, err := s.metricsUseCase.TryGetMetricValue(metricJson.MType, metricJson.ID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	switch metricJson.MType {
+	case repository.CounterMetricKey:
+		intValue, _ := value.(int64)
+		metricJson.Delta = &intValue
+		break
+	case repository.GaugeMetricKey:
+		floatValue, _ := value.(float64)
+		metricJson.Value = &floatValue
+	}
+
+	resp, err := json.Marshal(metricJson)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }

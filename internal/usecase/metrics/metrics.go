@@ -42,6 +42,18 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 	return errors.New("unsupported metric type")
 }
 
+func (m *MetricsUseCase) TryUpdateMetricValueFromJson(json repository.MetricsJson) error {
+	if json.MType == repository.CounterMetricKey {
+		m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
+		return nil
+	} else if json.MType == repository.GaugeMetricKey {
+		m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
+		return nil
+	}
+
+	return errors.New("unsupported metric type")
+}
+
 func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string) (any, error) {
 	switch metricType {
 	case repository.CounterMetricKey:
