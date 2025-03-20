@@ -156,20 +156,15 @@ func (s *Server) UpdateMetricForJson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buff bytes.Buffer
+	logger.Log.Infoln(r.Body)
 	var metricJson repository.MetricsJson
 
-	if _, err := buff.ReadFrom(r.Body); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&metricJson); err != nil {
+		logger.Log.Infof("Error while read from body %w", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := json.Unmarshal(buff.Bytes(), &metricJson); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	logger.Log.Infof("Data received from json! Key %s, metricaName %s, metricValue %s \n", metricJson.MType, metricJson.ID)
 	err := s.metricsUseCase.TryUpdateMetricValueFromJson(metricJson)
 
 	if err != nil {

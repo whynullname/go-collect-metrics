@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -79,6 +81,56 @@ func (a *Agent) SendMetrics() {
 	}
 
 	a.sendPostResponseWithMetrics(repository.CounterMetricKey, counterMetrics)
+}
+
+func (a *Agent) SendMetricsByJson() {
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for metricName, metricValue := range gaugeMetrics {
+		floatValue, _ := metricValue.(float64)
+		reqJson := repository.MetricsJson{
+			ID:    metricName,
+			MType: repository.GaugeMetricKey,
+			Value: &floatValue,
+		}
+		a.sendJson(reqJson)
+	}
+
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for metricName, metricValue := range counterMetrics {
+		intValue, _ := metricValue.(int64)
+		reqJson := repository.MetricsJson{
+			ID:    metricName,
+			MType: repository.CounterMetricKey,
+			Delta: &intValue,
+		}
+		a.sendJson(reqJson)
+	}
+}
+
+func (a *Agent) sendJson(repoJson repository.MetricsJson) {
+	var buf bytes.Buffer
+	j, err := json.Marshal(repoJson)
+	if err != nil {
+		return
+	}
+
+	buf.Write(j)
+	url := fmt.Sprintf("http://%s/update", a.Config.EndPointAdress)
+	resp, err := a.Client.Post(url, "application/json", &buf)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
 }
 
 func (a *Agent) sendPostResponseWithMetrics(metricKey string, metrics map[string]any) {
