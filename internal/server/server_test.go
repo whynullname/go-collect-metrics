@@ -58,7 +58,7 @@ func TestUpdateData(t *testing.T) {
 			targetURL:   "/update/",
 			contentType: "text/plain",
 			methodType:  http.MethodPost,
-			wantCode:    http.StatusNotFound,
+			wantCode:    http.StatusBadRequest,
 		},
 		{
 			name:        "test bad url #2",
@@ -70,7 +70,7 @@ func TestUpdateData(t *testing.T) {
 		{
 			name:        "test bad gauge value",
 			targetURL:   "/update/gauge/someMetric/badValue",
-			contentType: "text/plaint",
+			contentType: "text/plain",
 			methodType:  http.MethodPost,
 			wantCode:    http.StatusBadRequest,
 		},
