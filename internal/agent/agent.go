@@ -60,6 +60,9 @@ func (a *Agent) UpdateMetrics() {
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "StackSys", float64(memStats.StackSys))
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "Sys", float64(memStats.Sys))
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "TotalAlloc", float64(memStats.TotalAlloc))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "MCacheInuse", float64(memStats.MCacheInuse))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "MSpanInuse", float64(memStats.MSpanInuse))
+	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "MSpanSys", float64(memStats.MSpanSys))
 	a.metricsUseCase.TryUpdateMetricValue(repository.GaugeMetricKey, "RandomValue", rand.Float64())
 
 	a.metricsUseCase.TryUpdateMetricValue(repository.CounterMetricKey, "PollCount", int64(1))

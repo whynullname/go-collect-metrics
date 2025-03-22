@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 )
 
@@ -47,7 +48,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json repository.MetricsJSO
 		if json.Delta == nil {
 			return errors.New("delta for update conter metric is nil")
 		}
-
+		logger.Log.Infof("Add new counter metric %s", json.ID)
 		m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
 		return nil
 	} else if json.MType == repository.GaugeMetricKey {
@@ -55,6 +56,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json repository.MetricsJSO
 			return errors.New("value for update gauge metric is nil")
 		}
 
+		logger.Log.Infof("Add new gauge metric %s", json.ID)
 		m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
 		return nil
 	}

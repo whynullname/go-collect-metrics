@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
-	"github.com/whynullname/go-collect-metrics/internal/middlewares"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -67,7 +66,7 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Use(middlewares.Logging)
+	//r.Use(middlewares.Logging)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.GetAllMetrics)
@@ -148,6 +147,7 @@ func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType != "" && contentType != "application/json" {
@@ -156,7 +156,6 @@ func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Log.Infoln(r.Body)
 	var metricJSON repository.MetricsJSON
 
 	if err := json.NewDecoder(r.Body).Decode(&metricJSON); err != nil {
@@ -168,7 +167,7 @@ func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 	err := s.metricsUseCase.TryUpdateMetricValueFromJSON(metricJSON)
 
 	if err != nil {
-		logger.Log.Errorf("Error with update metrics: %s", err)
+		logger.Log.Errorf("Error with update metrics: %w", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -210,10 +209,12 @@ func (s *Server) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Request)
 
 	if _, err := buff.ReadFrom(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		logger.Log.Infof("ERROR! %w", err)
 		return
 	}
 
 	if err := json.Unmarshal(buff.Bytes(), &metricJSON); err != nil {
+		logger.Log.Infof("ERROR! %w", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -221,7 +222,8 @@ func (s *Server) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Request)
 	value, err := s.metricsUseCase.TryGetMetricValue(metricJSON.MType, metricJSON.ID)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		logger.Log.Infof("ERROR! %w", err)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -237,6 +239,7 @@ func (s *Server) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Request)
 	resp, err := json.Marshal(metricJSON)
 
 	if err != nil {
+		logger.Log.Infof("ERROR! %w", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
