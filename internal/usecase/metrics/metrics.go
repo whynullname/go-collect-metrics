@@ -43,13 +43,15 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 	return errors.New("unsupported metric type")
 }
 
-func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json repository.MetricsJSON) error {
+func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJSON) error {
 	if json.MType == repository.CounterMetricKey {
 		if json.Delta == nil {
 			return errors.New("delta for update conter metric is nil")
 		}
 		logger.Log.Infof("Add new counter metric %s", json.ID)
 		m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
+		newValue, _ := m.repository.TryGetCounterMetricValue(json.ID)
+		json.Delta = &newValue
 		return nil
 	} else if json.MType == repository.GaugeMetricKey {
 		if json.Value == nil {

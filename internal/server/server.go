@@ -157,14 +157,20 @@ func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var metricJSON repository.MetricsJSON
+	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		return
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&metricJSON); err != nil {
+	err = json.Unmarshal(body, &metricJSON)
+	if err != nil {
 		logger.Log.Infof("Error while read from body %w", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := s.metricsUseCase.TryUpdateMetricValueFromJSON(metricJSON)
+	err = s.metricsUseCase.TryUpdateMetricValueFromJSON(&metricJSON)
 
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
@@ -172,6 +178,15 @@ func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	output, err := json.Marshal(metricJSON)
+
+	if err != nil {
+		logger.Log.Errorf("Error with marshal output JSON: %w", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Write(output)
 	w.WriteHeader(http.StatusOK)
 }
 
