@@ -60,6 +60,8 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 
 		logger.Log.Infof("Add new gauge metric %s", json.ID)
 		m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
+		newValue, _ := m.repository.TryGetGaugeMetricValue(json.ID)
+		json.Value = &newValue
 		return nil
 	}
 

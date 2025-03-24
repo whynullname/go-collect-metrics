@@ -1,6 +1,9 @@
 package agent
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -10,6 +13,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -126,11 +130,27 @@ func (a *Agent) SendMetricsByJSON() {
 
 func (a *Agent) sendJSON(repoJSON *repository.MetricsJSON) {
 	url := fmt.Sprintf("http://%s/update", a.Config.EndPointAdress)
+
+	var buff bytes.Buffer
+	gz := gzip.NewWriter(&buff)
+	jsonBytes, err := json.Marshal(repoJSON)
+
+	if err != nil {
+		logger.Log.Infof("error %s", err.Error())
+		return
+	}
+
+	gz.Write(jsonBytes)
+	gz.Close()
+
 	newRequest := a.Client.R().
 		SetHeader("Content-Type", "application/json").
-		SetBody(repoJSON)
-	_, err := newRequest.Post(url)
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(&buff)
+
+	_, err = newRequest.Post(url)
 	if err != nil {
+		logger.Log.Infof("error %s", err.Error())
 		return
 	}
 }

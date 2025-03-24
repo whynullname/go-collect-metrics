@@ -13,6 +13,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
+	"github.com/whynullname/go-collect-metrics/internal/middlewares"
+	"github.com/whynullname/go-collect-metrics/internal/middlewares/compressmiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -66,7 +68,8 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
-	//r.Use(middlewares.Logging)
+	r.Use(middlewares.Logging)
+	r.Use(compressmiddleware.GZIP)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.GetAllMetrics)
@@ -113,12 +116,16 @@ func (s *Server) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 		"Counter": counterMetrics,
 	}
 
-	err = tmpl.Execute(w, data)
-
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	buf.WriteTo(w)
 }
 
 func (s *Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
@@ -186,8 +193,8 @@ func (s *Server) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(output)
 	w.WriteHeader(http.StatusOK)
+	w.Write(output)
 }
 
 func (s *Server) GetMetricByName(w http.ResponseWriter, r *http.Request) {
