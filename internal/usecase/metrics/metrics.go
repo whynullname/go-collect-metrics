@@ -46,8 +46,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 			return errors.New("delta for update conter metric is nil")
 		}
 
-		m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
-		newValue, _ := m.repository.TryGetCounterMetricValue(json.ID)
+		newValue := m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
 		json.Delta = &newValue
 		return nil
 	} else if json.MType == repository.GaugeMetricKey {
@@ -55,8 +54,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 			return errors.New("value for update gauge metric is nil")
 		}
 
-		m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
-		newValue, _ := m.repository.TryGetGaugeMetricValue(json.ID)
+		newValue := m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
 		json.Value = &newValue
 		return nil
 	}

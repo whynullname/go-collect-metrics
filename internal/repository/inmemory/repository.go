@@ -30,13 +30,14 @@ func (i *InMemoryRepo) TryGetCounterMetricValue(metricName string) (int64, bool)
 	return val, ok
 }
 
-func (i *InMemoryRepo) UpdateGaugeMetricValue(metricName string, metricValue float64) {
+func (i *InMemoryRepo) UpdateGaugeMetricValue(metricName string, metricValue float64) float64 {
 	i.mx.Lock()
 	defer i.mx.Unlock()
 	i.GaugeMetrics[metricName] = metricValue
+	return metricValue
 }
 
-func (i *InMemoryRepo) UpdateCounterMetricValue(metricName string, metricValue int64) {
+func (i *InMemoryRepo) UpdateCounterMetricValue(metricName string, metricValue int64) int64 {
 	i.mx.Lock()
 	defer i.mx.Unlock()
 
@@ -49,6 +50,7 @@ func (i *InMemoryRepo) UpdateCounterMetricValue(metricName string, metricValue i
 	}
 
 	i.CounterMetrics[metricName] = val
+	return val
 }
 
 func (i *InMemoryRepo) GetAllGaugeMetrics() map[string]float64 {
