@@ -13,6 +13,7 @@ import (
 	"github.com/whynullname/go-collect-metrics/internal/agent"
 	configAgent "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	configServer "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -75,7 +76,7 @@ func TestUpdateData(t *testing.T) {
 			wantCode:    http.StatusBadRequest,
 		},
 	}
-
+	logger.Initialize("info")
 	repo := inmemory.NewInMemoryRepository()
 	cfg := configServer.NewServerConfig()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
@@ -99,6 +100,7 @@ func TestUpdateData(t *testing.T) {
 }
 
 func TestGetData(t *testing.T) {
+	logger.Initialize("info")
 	memStats := runtime.MemStats{}
 	repo := inmemory.NewInMemoryRepository()
 	agentCfg := configAgent.NewAgentConfig()

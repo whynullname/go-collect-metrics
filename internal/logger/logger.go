@@ -7,6 +7,10 @@ import (
 var Log *zap.SugaredLogger
 
 func Initialize(level string) error {
+	if Log != nil {
+		return nil
+	}
+
 	lvl, err := zap.ParseAtomicLevel(level)
 
 	if err != nil {

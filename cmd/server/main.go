@@ -12,6 +12,12 @@ import (
 )
 
 func main() {
+	err := logger.Initialize("info")
+	if err != nil {
+		log.Fatalf("Fatal initialize logger")
+		return
+	}
+
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
 	repo := inmemory.NewInMemoryRepository()

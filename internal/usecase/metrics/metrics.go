@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 )
 
@@ -22,7 +21,6 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName string, value any) error {
 	if metricType == repository.CounterMetricKey {
 		metricValue, err := toInt64(value)
-
 		if err != nil {
 			return err
 		}
@@ -31,7 +29,6 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 		return nil
 	} else if metricType == repository.GaugeMetricKey {
 		metricValue, err := toFloat64(value)
-
 		if err != nil {
 			return err
 		}
@@ -48,7 +45,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 		if json.Delta == nil {
 			return errors.New("delta for update conter metric is nil")
 		}
-		logger.Log.Infof("Add new counter metric %s", json.ID)
+
 		m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
 		newValue, _ := m.repository.TryGetCounterMetricValue(json.ID)
 		json.Delta = &newValue
@@ -58,7 +55,6 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 			return errors.New("value for update gauge metric is nil")
 		}
 
-		logger.Log.Infof("Add new gauge metric %s", json.ID)
 		m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
 		newValue, _ := m.repository.TryGetGaugeMetricValue(json.ID)
 		json.Value = &newValue
@@ -72,7 +68,6 @@ func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string)
 	switch metricType {
 	case repository.CounterMetricKey:
 		val, ok := m.repository.TryGetCounterMetricValue(metricName)
-
 		if !ok {
 			return nil, fmt.Errorf("can't find metric with name %s", metricName)
 		}
@@ -80,7 +75,6 @@ func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string)
 		return val, nil
 	case repository.GaugeMetricKey:
 		val, ok := m.repository.TryGetGaugeMetricValue(metricName)
-
 		if !ok {
 			return nil, fmt.Errorf("can't find metric with name %s", metricName)
 		}

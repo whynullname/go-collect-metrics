@@ -26,12 +26,6 @@ type Agent struct {
 }
 
 func NewAgent(memStats *runtime.MemStats, metricUseCase *metrics.MetricsUseCase, config *config.AgentConfig) *Agent {
-	err := logger.Initialize("info")
-
-	if err != nil {
-		log.Fatalf("Fatal initialize logger")
-	}
-
 	client := resty.New().
 		SetRetryCount(3).
 		SetRetryWaitTime(1 * time.Second).

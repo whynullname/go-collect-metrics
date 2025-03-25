@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"runtime"
 	"time"
 
@@ -12,6 +13,13 @@ import (
 )
 
 func main() {
+	err := logger.Initialize("info")
+
+	if err != nil {
+		log.Fatalf("Fatal initialize logger")
+		return
+	}
+
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
 
