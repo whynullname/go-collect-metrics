@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"runtime"
 	"time"
 
@@ -13,22 +12,15 @@ import (
 )
 
 func main() {
-	err := logger.Initialize("info")
-
-	if err != nil {
-		log.Fatalf("Fatal initialize logger")
-		return
-	}
-
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
-	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
 
 	memStats := runtime.MemStats{}
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
 
 	instance := agent.NewAgent(&memStats, metricsUseCase, cfg)
+	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
 	updateAndSendMetrics(instance)
 }
 
