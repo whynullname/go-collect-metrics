@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -55,11 +54,6 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 	serverInstance := &Server{
 		metricsUseCase: metricsUseCase,
 		Config:         config,
-	}
-	err := logger.Initialize("info")
-
-	if err != nil {
-		log.Fatalf("Fatal initialize logger")
 	}
 
 	serverInstance.Router = serverInstance.createRouter()
