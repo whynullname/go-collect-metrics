@@ -10,20 +10,19 @@ type InMemoryRepo struct {
 
 func NewInMemoryRepository() *InMemoryRepo {
 	return &InMemoryRepo{
-		mx:             sync.RWMutex{},
 		GaugeMetrics:   make(map[string]float64),
 		CounterMetrics: make(map[string]int64),
 	}
 }
 
-func (i *InMemoryRepo) TryGetGaugeMetricValue(metricName string) (float64, bool) {
+func (i *InMemoryRepo) GetGaugeMetricValue(metricName string) (float64, bool) {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 	val, ok := i.GaugeMetrics[metricName]
 	return val, ok
 }
 
-func (i *InMemoryRepo) TryGetCounterMetricValue(metricName string) (int64, bool) {
+func (i *InMemoryRepo) GetCounterMetricValue(metricName string) (int64, bool) {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 	val, ok := i.CounterMetrics[metricName]

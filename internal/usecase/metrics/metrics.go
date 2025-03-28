@@ -65,14 +65,14 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string) (any, error) {
 	switch metricType {
 	case repository.CounterMetricKey:
-		val, ok := m.repository.TryGetCounterMetricValue(metricName)
+		val, ok := m.repository.GetCounterMetricValue(metricName)
 		if !ok {
 			return nil, fmt.Errorf("can't find metric with name %s", metricName)
 		}
 
 		return val, nil
 	case repository.GaugeMetricKey:
-		val, ok := m.repository.TryGetGaugeMetricValue(metricName)
+		val, ok := m.repository.GetGaugeMetricValue(metricName)
 		if !ok {
 			return nil, fmt.Errorf("can't find metric with name %s", metricName)
 		}

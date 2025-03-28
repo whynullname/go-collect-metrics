@@ -1,8 +1,8 @@
 package repository
 
 type Repository interface {
-	TryGetGaugeMetricValue(metricName string) (float64, bool)
-	TryGetCounterMetricValue(metricName string) (int64, bool)
+	GetGaugeMetricValue(metricName string) (float64, bool)
+	GetCounterMetricValue(metricName string) (int64, bool)
 	UpdateGaugeMetricValue(metricName string, metricValue float64) float64
 	UpdateCounterMetricValue(metricName string, metricValue int64) int64
 	GetAllGaugeMetrics() map[string]float64
