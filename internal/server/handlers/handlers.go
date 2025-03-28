@@ -201,10 +201,18 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 
 	switch metricJSON.MType {
 	case repository.CounterMetricKey:
-		intValue, _ := value.(int64)
+		intValue, ok := value.(int64)
+		if !ok {
+			return
+		}
+
 		metricJSON.Delta = &intValue
 	case repository.GaugeMetricKey:
-		floatValue, _ := value.(float64)
+		floatValue, ok := value.(float64)
+		if !ok {
+			return
+		}
+
 		metricJSON.Value = &floatValue
 	}
 
