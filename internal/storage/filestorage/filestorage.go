@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
@@ -16,6 +17,7 @@ type FileStorage struct {
 	encoder *json.Encoder
 	decoder *json.Decoder
 	scanner *bufio.Scanner
+	mx      sync.Mutex
 }
 
 func NewFileStorage(filePath string) (*FileStorage, error) {
@@ -38,14 +40,16 @@ func NewFileStorage(filePath string) (*FileStorage, error) {
 func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) {
 	defer s.file.Close()
 	duration := time.Duration(interval) * time.Second
+	ticker := time.NewTicker(duration)
 
-	for {
-		time.Sleep(duration)
+	for range ticker.C {
 		s.WriteMetrics(repo)
 	}
 }
 
 func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
 	gaugeMetrics := repo.GetAllGaugeMetrics()
 	counterMetrics := repo.GetAllCounterMetrics()
 
@@ -73,6 +77,8 @@ func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 }
 
 func (s *FileStorage) ReadAllMetrics(repo repository.Repository) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
 	savedMetrics := make([]repository.MetricsJSON, 0)
 	err := s.decoder.Decode(&savedMetrics)
 	if err != nil {
