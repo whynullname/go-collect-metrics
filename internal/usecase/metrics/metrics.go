@@ -1,11 +1,10 @@
 package metrics
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 )
 
 type MetricsUseCase struct {
@@ -37,14 +36,14 @@ func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName stri
 		return nil
 	}
 
-	return errors.New("unsupported metric type")
+	return types.ErrUnsupportedMetricType
 }
 
 func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJSON) error {
 	switch json.MType {
 	case repository.CounterMetricKey:
 		if json.Delta == nil {
-			return errors.New("delta for update conter metric is nil")
+			return types.ErrMetricNilValue
 		}
 
 		newValue := m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
@@ -52,7 +51,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 		return nil
 	case repository.GaugeMetricKey:
 		if json.Value == nil {
-			return errors.New("value for update gauge metric is nil")
+			return types.ErrMetricNilValue
 		}
 
 		newValue := m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
@@ -60,7 +59,7 @@ func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJS
 		return nil
 	}
 
-	return errors.New("unsupported metric type")
+	return types.ErrUnsupportedMetricType
 }
 
 func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string) (any, error) {
@@ -68,19 +67,19 @@ func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string)
 	case repository.CounterMetricKey:
 		val, ok := m.repository.GetCounterMetricValue(metricName)
 		if !ok {
-			return nil, fmt.Errorf("can't find metric with name %s", metricName)
+			return nil, types.ErrCantFindMetric
 		}
 
 		return val, nil
 	case repository.GaugeMetricKey:
 		val, ok := m.repository.GetGaugeMetricValue(metricName)
 		if !ok {
-			return nil, fmt.Errorf("can't find metric with name %s", metricName)
+			return nil, types.ErrCantFindMetric
 		}
 
 		return val, nil
 	default:
-		return nil, errors.New("unsupported metric type")
+		return nil, types.ErrUnsupportedMetricType
 	}
 }
 
@@ -105,7 +104,7 @@ func (m *MetricsUseCase) GetAllMetricsByType(metricType string) (map[string]any,
 
 		return result, nil
 	default:
-		return nil, errors.New("unsupported metric type")
+		return nil, types.ErrUnsupportedMetricType
 	}
 }
 
@@ -116,7 +115,7 @@ func toInt64(value any) (int64, error) {
 	case string:
 		return strconv.ParseInt(v, 10, 64)
 	default:
-		return 0, fmt.Errorf("unsupported type: %T", v)
+		return 0, types.ErrUnsupportedMetricValueType
 	}
 }
 
@@ -127,6 +126,6 @@ func toFloat64(value any) (float64, error) {
 	case string:
 		return strconv.ParseFloat(v, 64)
 	default:
-		return 0, fmt.Errorf("unsupported type: %T", v)
+		return 0, types.ErrUnsupportedMetricValueType
 	}
 }
