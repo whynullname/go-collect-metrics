@@ -113,7 +113,12 @@ func toInt64(value any) (int64, error) {
 	case int64:
 		return v, nil
 	case string:
-		return strconv.ParseInt(v, 10, 64)
+		output, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return 0, types.ErrUnsupportedMetricValueType
+		}
+
+		return output, nil
 	default:
 		return 0, types.ErrUnsupportedMetricValueType
 	}
@@ -124,7 +129,12 @@ func toFloat64(value any) (float64, error) {
 	case float64:
 		return v, nil
 	case string:
-		return strconv.ParseFloat(v, 64)
+		output, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return 0, types.ErrUnsupportedMetricValueType
+		}
+
+		return output, nil
 	default:
 		return 0, types.ErrUnsupportedMetricValueType
 	}

@@ -2,7 +2,6 @@ package filestorage
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"os"
 	"sync"
@@ -13,11 +12,10 @@ import (
 
 type FileStorage struct {
 	file    *os.File
-	buffer  *bytes.Buffer
 	encoder *json.Encoder
 	decoder *json.Decoder
 	scanner *bufio.Scanner
-	mx      sync.Mutex
+	mx      sync.RWMutex
 }
 
 func NewFileStorage(filePath string) (*FileStorage, error) {
@@ -41,6 +39,7 @@ func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) 
 	defer s.file.Close()
 	duration := time.Duration(interval) * time.Second
 	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
 
 	for range ticker.C {
 		s.WriteMetrics(repo)
@@ -48,8 +47,8 @@ func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) 
 }
 
 func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	gaugeMetrics := repo.GetAllGaugeMetrics()
 	counterMetrics := repo.GetAllCounterMetrics()
 
@@ -77,8 +76,8 @@ func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 }
 
 func (s *FileStorage) ReadAllMetrics(repo repository.Repository) error {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	savedMetrics := make([]repository.MetricsJSON, 0)
 	err := s.decoder.Decode(&savedMetrics)
 	if err != nil {
