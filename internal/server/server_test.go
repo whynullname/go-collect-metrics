@@ -15,6 +15,7 @@ import (
 	configServer "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
@@ -80,7 +81,7 @@ func TestUpdateData(t *testing.T) {
 	repo := inmemory.NewInMemoryRepository()
 	cfg := configServer.NewServerConfig()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	serv := NewServer(metricsUseCase, cfg)
+	serv := NewServer(metricsUseCase, cfg, postgres.NewPostgresRepo(cfg.PostgressAdress))
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 
@@ -107,7 +108,7 @@ func TestGetData(t *testing.T) {
 	serverCfg := configServer.NewServerConfig()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
 	agent := agent.NewAgent(&memStats, metricsUseCase, agentCfg)
-	serv := NewServer(metricsUseCase, serverCfg)
+	serv := NewServer(metricsUseCase, serverCfg, postgres.NewPostgresRepo(serverCfg.PostgressAdress))
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
 	agent.UpdateMetrics()

@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -13,6 +14,7 @@ type ServerConfig struct {
 	StoreInterval   uint64
 	FileStoragePath string
 	RestoreData     bool
+	PostgressAdress string
 }
 
 func NewServerConfig() *ServerConfig {
@@ -36,6 +38,7 @@ func (s *ServerConfig) registerFlags() {
 	flag.Uint64Var(&s.StoreInterval, "i", 300, "interval to save all metrics to file")
 	flag.StringVar(&s.FileStoragePath, "f", "metrics.json", "path to save metrics")
 	flag.BoolVar(&s.RestoreData, "r", true, "need load saved data in start")
+	flag.StringVar(&s.PostgressAdress, "d", fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", `localhost`, `videos`, `XXXXXXXX`, `videos`), "adress to connect postgres")
 }
 
 func (s *ServerConfig) checkEnvAddr() {
@@ -67,5 +70,9 @@ func (s *ServerConfig) checkEnvAddr() {
 		}
 
 		s.RestoreData = restore
+	}
+
+	if postgresAdress := os.Getenv("DATABASE_DSN"); postgresAdress != "" {
+		s.PostgressAdress = postgresAdress
 	}
 }

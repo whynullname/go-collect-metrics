@@ -6,9 +6,12 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
 	"github.com/whynullname/go-collect-metrics/internal/server"
 	"github.com/whynullname/go-collect-metrics/internal/storage/filestorage"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -22,7 +25,9 @@ func main() {
 	cfg.ParseFlags()
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	server := server.NewServer(metricsUseCase, cfg)
+	postgres := postgres.NewPostgresRepo(cfg.PostgressAdress)
+	defer postgres.CloseRepo()
+	server := server.NewServer(metricsUseCase, cfg, postgres)
 	fileStorage, err := filestorage.NewFileStorage(cfg.FileStoragePath)
 
 	if err != nil {
@@ -41,4 +46,5 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
+
 }

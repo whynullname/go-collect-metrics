@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,10 +10,12 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
 	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -44,11 +47,13 @@ const (
 
 type Handlers struct {
 	metricsUseCase *metrics.MetricsUseCase
+	postgres       *postgres.Postgres //Сделано тестово для 10 инкремента, обязательно нужно сдеалть нормальным репозиторием
 }
 
-func NewHandlers(metricsUseCase *metrics.MetricsUseCase) *Handlers {
+func NewHandlers(metricsUseCase *metrics.MetricsUseCase, postgres *postgres.Postgres) *Handlers {
 	return &Handlers{
 		metricsUseCase: metricsUseCase,
+		postgres:       postgres,
 	}
 }
 
@@ -259,4 +264,17 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
+}
+
+func (h *Handlers) PingPostgres(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if err := h.postgres.Db.PingContext(ctx); err != nil {
+		logger.Log.Info(h.postgres.Adress)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
