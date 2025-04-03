@@ -7,7 +7,7 @@ import (
 )
 
 type Postgres struct {
-	Db     *sql.DB
+	DB     *sql.DB
 	Adress string
 }
 
@@ -21,11 +21,11 @@ func NewPostgresRepo(adress string) *Postgres {
 	//defer db.Close()
 
 	return &Postgres{
-		Db:     db,
+		DB:     db,
 		Adress: adress,
 	}
 }
 
 func (p *Postgres) CloseRepo() {
-	p.Db.Close()
+	p.DB.Close()
 }
