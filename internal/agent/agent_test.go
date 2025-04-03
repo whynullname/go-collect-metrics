@@ -6,12 +6,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
 func TestUpdateMetrics(t *testing.T) {
+	logger.Initialize("info")
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
 	repo := inmemory.NewInMemoryRepository()
