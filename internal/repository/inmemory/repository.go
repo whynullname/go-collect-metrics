@@ -63,3 +63,7 @@ func (i *InMemoryRepo) GetAllCounterMetrics() map[string]int64 {
 	defer i.mx.Unlock()
 	return i.CounterMetrics
 }
+
+func (i *InMemoryRepo) CloseRepository() {
+
+}

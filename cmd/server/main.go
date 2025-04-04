@@ -5,7 +5,6 @@ import (
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
-	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
 	"github.com/whynullname/go-collect-metrics/internal/server"
 	"github.com/whynullname/go-collect-metrics/internal/storage/filestorage"
@@ -23,11 +22,10 @@ func main() {
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
-	repo := inmemory.NewInMemoryRepository()
+	repo := postgres.NewPostgresRepo(cfg.PostgressAdress)
+	defer repo.CloseRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	postgres := postgres.NewPostgresRepo(cfg.PostgressAdress)
-	defer postgres.CloseRepo()
-	server := server.NewServer(metricsUseCase, cfg, postgres)
+	server := server.NewServer(metricsUseCase, cfg, repo)
 	fileStorage, err := filestorage.NewFileStorage(cfg.FileStoragePath)
 
 	if err != nil {

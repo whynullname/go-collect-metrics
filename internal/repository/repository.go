@@ -7,6 +7,7 @@ type Repository interface {
 	UpdateCounterMetricValue(metricName string, metricValue int64) int64
 	GetAllGaugeMetrics() map[string]float64
 	GetAllCounterMetrics() map[string]int64
+	CloseRepository()
 }
 
 const (
