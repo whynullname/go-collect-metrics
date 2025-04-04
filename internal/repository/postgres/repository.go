@@ -64,14 +64,19 @@ func (p *Postgres) GetCounterMetricValue(metricName string) (int64, bool) {
 
 func (p *Postgres) UpdateGaugeMetricValue(metricName string, metricValue float64) float64 {
 	res, err := p.DB.ExecContext(context.Background(), "UPDATE "+GaugeMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", metricValue, metricName)
-	if rows, err := res.RowsAffected(); rows == 0 || err != nil {
-		_, err = p.DB.ExecContext(context.Background(), "INSERT INTO "+GaugeMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, metricValue)
-	}
-
 	if err != nil {
 		logger.Log.Error(err)
 		return 0
 	}
+
+	if rows, err := res.RowsAffected(); rows == 0 || err != nil {
+		_, err = p.DB.ExecContext(context.Background(), "INSERT INTO "+GaugeMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, metricValue)
+		if err != nil {
+			logger.Log.Error(err)
+			return 0
+		}
+	}
+
 	return metricValue
 }
 
