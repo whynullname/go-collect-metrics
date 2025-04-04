@@ -52,18 +52,22 @@ func (p *Postgres) GetGaugeMetricValue(metricName string) (float64, bool) {
 		logger.Log.Error(err)
 	}
 
-	return output, err != nil
+	return output, err == nil
 }
 
 func (p *Postgres) GetCounterMetricValue(metricName string) (int64, bool) {
 	row := p.DB.QueryRowContext(context.Background(), "SELECT metric_value FROM "+CounterMetricsTableName+" WHERE metric_id = $1", metricName)
 	var output int64
 	err := row.Scan(&output)
-	return output, err != nil
+	return output, err == nil
 }
 
 func (p *Postgres) UpdateGaugeMetricValue(metricName string, metricValue float64) float64 {
-	_, err := p.DB.ExecContext(context.Background(), "INSERT INTO "+GaugeMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, metricValue)
+	res, err := p.DB.ExecContext(context.Background(), "UPDATE "+GaugeMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", metricValue, metricName)
+	if rows, err := res.RowsAffected(); rows == 0 || err != nil {
+		_, err = p.DB.ExecContext(context.Background(), "INSERT INTO "+GaugeMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, metricValue)
+	}
+
 	if err != nil {
 		logger.Log.Error(err)
 		return 0
@@ -76,15 +80,20 @@ func (p *Postgres) UpdateCounterMetricValue(metricName string, metricValue int64
 
 	if !ok {
 		val = metricValue
+		_, err := p.DB.ExecContext(context.Background(), "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, val)
+		if err != nil {
+			logger.Log.Error(err)
+			return 0
+		}
 	} else {
 		val += metricValue
+		_, err := p.DB.ExecContext(context.Background(), "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", val, metricName)
+		if err != nil {
+			logger.Log.Error(err)
+			return 0
+		}
 	}
 
-	_, err := p.DB.ExecContext(context.Background(), "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", metricName, metricValue)
-	if err != nil {
-		logger.Log.Error(err)
-		return 0
-	}
 	return val
 }
 
