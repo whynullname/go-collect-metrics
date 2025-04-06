@@ -49,24 +49,15 @@ func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) 
 func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	gaugeMetrics := repo.GetAllGaugeMetrics()
-	counterMetrics := repo.GetAllCounterMetrics()
+	gaugeMetrics := repo.GetAllMetricsByType(repository.GaugeMetricKey)
+	counterMetrics := repo.GetAllMetricsByType(repository.CounterMetricKey)
 
-	outputMetrics := make([]repository.MetricsJSON, 0)
-	for metricName, metricValue := range gaugeMetrics {
-		outputMetrics = append(outputMetrics, repository.MetricsJSON{
-			ID:    metricName,
-			MType: repository.GaugeMetricKey,
-			Value: &metricValue,
-		})
+	outputMetrics := make([]repository.Metric, 0)
+	for _, metricValue := range gaugeMetrics {
+		outputMetrics = append(outputMetrics, metricValue)
 	}
-
-	for metricName, metricValue := range counterMetrics {
-		outputMetrics = append(outputMetrics, repository.MetricsJSON{
-			ID:    metricName,
-			MType: repository.CounterMetricKey,
-			Delta: &metricValue,
-		})
+	for _, metricValue := range counterMetrics {
+		outputMetrics = append(outputMetrics, metricValue)
 	}
 
 	s.file.Seek(0, 0)
@@ -78,20 +69,14 @@ func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 func (s *FileStorage) ReadAllMetrics(repo repository.Repository) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	savedMetrics := make([]repository.MetricsJSON, 0)
+	savedMetrics := make([]repository.Metric, 0)
 	err := s.decoder.Decode(&savedMetrics)
 	if err != nil {
 		return err
 	}
 
 	for _, metric := range savedMetrics {
-		if metric.MType == repository.CounterMetricKey {
-			repo.UpdateCounterMetricValue(metric.ID, *metric.Delta)
-		}
-
-		if metric.MType == repository.GaugeMetricKey {
-			repo.UpdateGaugeMetricValue(metric.ID, *metric.Value)
-		}
+		repo.UpdateMetric(&metric)
 	}
 
 	return nil

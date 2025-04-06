@@ -1,8 +1,6 @@
 package metrics
 
 import (
-	"strconv"
-
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 )
@@ -17,125 +15,34 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 	}
 }
 
-func (m *MetricsUseCase) TryUpdateMetricValue(metricType string, metricName string, value any) error {
-	if metricType == repository.CounterMetricKey {
-		metricValue, err := toInt64(value)
-		if err != nil {
-			return err
-		}
-
-		m.repository.UpdateCounterMetricValue(metricName, metricValue)
-		return nil
-	} else if metricType == repository.GaugeMetricKey {
-		metricValue, err := toFloat64(value)
-		if err != nil {
-			return err
-		}
-
-		m.repository.UpdateGaugeMetricValue(metricName, metricValue)
-		return nil
+func (m *MetricsUseCase) UpdateMetric(json *repository.Metric) (*repository.Metric, error) {
+	if json == nil || (json.Delta == nil && json.Value == nil) {
+		return nil, types.ErrMetricNilValue
 	}
 
-	return types.ErrUnsupportedMetricType
-}
-
-func (m *MetricsUseCase) TryUpdateMetricValueFromJSON(json *repository.MetricsJSON) error {
-	switch json.MType {
-	case repository.CounterMetricKey:
-		if json.Delta == nil {
-			return types.ErrMetricNilValue
-		}
-
-		newValue := m.repository.UpdateCounterMetricValue(json.ID, *json.Delta)
-		json.Delta = &newValue
-		return nil
-	case repository.GaugeMetricKey:
-		if json.Value == nil {
-			return types.ErrMetricNilValue
-		}
-
-		newValue := m.repository.UpdateGaugeMetricValue(json.ID, *json.Value)
-		json.Value = &newValue
-		return nil
-	}
-
-	return types.ErrUnsupportedMetricType
-}
-
-func (m *MetricsUseCase) TryGetMetricValue(metricType string, metricName string) (any, error) {
-	switch metricType {
-	case repository.CounterMetricKey:
-		val, ok := m.repository.GetCounterMetricValue(metricName)
-		if !ok {
-			return nil, types.ErrCantFindMetric
-		}
-
-		return val, nil
-	case repository.GaugeMetricKey:
-		val, ok := m.repository.GetGaugeMetricValue(metricName)
-		if !ok {
-			return nil, types.ErrCantFindMetric
-		}
-
-		return val, nil
-	default:
+	if json.MType != repository.CounterMetricKey && json.MType != repository.GaugeMetricKey {
 		return nil, types.ErrUnsupportedMetricType
 	}
+
+	metric := m.repository.UpdateMetric(json)
+	if metric == nil {
+		return nil, types.ErrWileUpdateMetric
+	}
+	return metric, nil
 }
 
-func (m *MetricsUseCase) GetAllMetricsByType(metricType string) (map[string]any, error) {
-	switch metricType {
-	case repository.CounterMetricKey:
-		metrics := m.repository.GetAllCounterMetrics()
-		result := make(map[string]any)
-
-		for k, v := range metrics {
-			result[k] = v
-		}
-
-		return result, nil
-	case repository.GaugeMetricKey:
-		metrics := m.repository.GetAllGaugeMetrics()
-		result := make(map[string]any)
-
-		for k, v := range metrics {
-			result[k] = v
-		}
-
-		return result, nil
-	default:
+func (m *MetricsUseCase) GetMetric(metricType string, metricName string) (*repository.Metric, error) {
+	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
 		return nil, types.ErrUnsupportedMetricType
 	}
+
+	metric, ok := m.repository.GetMetric(metricName, metricType)
+	if !ok {
+		return nil, types.ErrCantFindMetric
+	}
+	return metric, nil
 }
 
-func toInt64(value any) (int64, error) {
-	switch v := value.(type) {
-	case int64:
-		return v, nil
-	case string:
-		output, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return 0, types.ErrUnsupportedMetricValueType
-		}
-
-		return output, nil
-	default:
-		return 0, types.ErrUnsupportedMetricValueType
-	}
-}
-
-func toFloat64(value any) (float64, error) {
-	switch v := value.(type) {
-	case float64:
-		return v, nil
-	case string:
-		output, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return 0, types.ErrUnsupportedMetricValueType
-		}
-
-		return output, nil
-	default:
-		return 0, types.ErrUnsupportedMetricValueType
-	}
+func (m *MetricsUseCase) GetAllMetricsByType(metricType string) []repository.Metric {
+	return m.repository.GetAllMetricsByType(metricType)
 }

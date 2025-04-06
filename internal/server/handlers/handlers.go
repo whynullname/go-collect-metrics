@@ -57,6 +57,7 @@ func NewHandlers(metricsUseCase *metrics.MetricsUseCase, postgres *postgres.Post
 	}
 }
 
+// TODO: ПЕРЕДЕЛАТЬ ПОД repository.Metric
 func (h *Handlers) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("webpage").Parse(allDataHTMLTemplate)
 	if err != nil {
@@ -64,28 +65,8 @@ func (h *Handlers) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gaugeMetrics, err := h.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	if err != nil {
-		if errors.Is(err, types.ErrUnsupportedMetricType) {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		return
-	}
-
-	counterMetrics, err := h.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
-	if err != nil {
-		if errors.Is(err, types.ErrUnsupportedMetricType) {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		return
-	}
-
+	gaugeMetrics := h.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
+	counterMetrics := h.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
 	data := map[string]any{
 		"Gauge":   gaugeMetrics,
 		"Counter": counterMetrics,
@@ -110,28 +91,49 @@ func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metricType := chi.URLParam(r, "key")
+	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "merticName")
 	metricValue := chi.URLParam(r, "metricValue")
-	logger.Log.Infof("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
 
-	err := h.metricsUseCase.TryUpdateMetricValue(metricType, metricName, metricValue)
-	if err != nil {
-		logger.Log.Errorf("Error with update metrics: %s", err)
-
-		if errors.Is(err, types.ErrUnsupportedMetricValueType) || errors.Is(err, types.ErrUnsupportedMetricType) {
+	var metricObject repository.Metric
+	switch metricType {
+	case repository.CounterMetricKey:
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			logger.Log.Error(err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		w.WriteHeader(http.StatusInternalServerError)
+		metricObject = repository.Metric{
+			MType: repository.CounterMetricKey,
+			Delta: &value,
+			ID:    metricName,
+		}
+		break
+	case repository.GaugeMetricKey:
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			logger.Log.Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		metricObject = repository.Metric{
+			MType: repository.GaugeMetricKey,
+			Value: &value,
+			ID:    metricName,
+		}
+		break
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	logger.Log.Infof("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
+	h.metricsUseCase.UpdateMetric(&metricObject)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handlers) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
 
@@ -141,24 +143,29 @@ func (h *Handlers) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var metricJSON repository.MetricsJSON
+	var metricJSON repository.Metric
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
+		logger.Log.Error(err)
 		return
 	}
 
 	err = json.Unmarshal(body, &metricJSON)
 	if err != nil {
-		logger.Log.Infof("Error while read from body %w", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		metrics := make([]repository.Metric, 0)
+		err = json.Unmarshal(body, &metrics)
+
+		if err != nil {
+			logger.Log.Infof("Error while read from body %w", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
-	err = h.metricsUseCase.TryUpdateMetricValueFromJSON(&metricJSON)
+	updatedMetric, err := h.metricsUseCase.UpdateMetric(&metricJSON)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
-
 		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -168,7 +175,50 @@ func (h *Handlers) UpdateMetricForJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := json.Marshal(metricJSON)
+	output, err := json.Marshal(updatedMetric)
+	if err != nil {
+		logger.Log.Errorf("Error with marshal output JSON: %w", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+}
+
+func (h *Handlers) UpdateArrayMetrics(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Log.Infof("Error while read from body %w", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var metricsJSON []repository.Metric
+	err = json.Unmarshal(body, &metricsJSON)
+	if err != nil {
+		logger.Log.Infof("Error %w", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	outputMetric := make([]repository.Metric, 0)
+	for _, metric := range metricsJSON {
+		metric, err := h.metricsUseCase.UpdateMetric(&metric)
+		if err != nil {
+			logger.Log.Errorf("Error with update metrics: %w", err)
+
+			if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		outputMetric = append(outputMetric, *metric)
+	}
+
+	output, err := json.Marshal(outputMetric)
 	if err != nil {
 		logger.Log.Errorf("Error with marshal output JSON: %w", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -183,7 +233,7 @@ func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
-	val, err := h.metricsUseCase.TryGetMetricValue(metricType, metricName)
+	val, err := h.metricsUseCase.GetMetric(metricType, metricName)
 	if err != nil {
 		if errors.Is(err, types.ErrCantFindMetric) {
 			w.WriteHeader(http.StatusNotFound)
@@ -195,11 +245,12 @@ func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch value := val.(type) {
-	case int64:
-		io.WriteString(w, fmt.Sprintf("%d", value))
-	case float64:
-		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
+	switch metricType {
+	case repository.CounterMetricKey:
+		io.WriteString(w, fmt.Sprintf("%d", *val.Delta))
+		break
+	case repository.GaugeMetricKey:
+		io.WriteString(w, strconv.FormatFloat(*val.Value, 'f', -1, 64))
 	}
 }
 
@@ -213,7 +264,7 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 	}
 
 	var buff bytes.Buffer
-	var metricJSON repository.MetricsJSON
+	var metricJSON repository.Metric
 
 	if _, err := buff.ReadFrom(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -227,7 +278,7 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	value, err := h.metricsUseCase.TryGetMetricValue(metricJSON.MType, metricJSON.ID)
+	ouputMetric, err := h.metricsUseCase.GetMetric(metricJSON.MType, metricJSON.ID)
 	if err != nil {
 		if errors.Is(err, types.ErrCantFindMetric) {
 			w.WriteHeader(http.StatusNotFound)
@@ -238,24 +289,7 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	switch metricJSON.MType {
-	case repository.CounterMetricKey:
-		intValue, ok := value.(int64)
-		if !ok {
-			return
-		}
-
-		metricJSON.Delta = &intValue
-	case repository.GaugeMetricKey:
-		floatValue, ok := value.(float64)
-		if !ok {
-			return
-		}
-
-		metricJSON.Value = &floatValue
-	}
-
-	resp, err := json.Marshal(metricJSON)
+	resp, err := json.Marshal(ouputMetric)
 	if err != nil {
 		logger.Log.Infof("ERROR! %w", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

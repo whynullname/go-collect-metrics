@@ -1,67 +1,77 @@
 package inmemory
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/whynullname/go-collect-metrics/internal/repository"
+)
 
 type InMemoryRepo struct {
-	mx             sync.RWMutex
-	GaugeMetrics   map[string]float64
-	CounterMetrics map[string]int64
+	mx      sync.RWMutex
+	metrics []repository.Metric
 }
 
 func NewInMemoryRepository() *InMemoryRepo {
 	return &InMemoryRepo{
-		GaugeMetrics:   make(map[string]float64),
-		CounterMetrics: make(map[string]int64),
+		metrics: make([]repository.Metric, 0),
 	}
 }
 
-func (i *InMemoryRepo) GetGaugeMetricValue(metricName string) (float64, bool) {
+func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metric {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
-	val, ok := i.GaugeMetrics[metricName]
-	return val, ok
-}
-
-func (i *InMemoryRepo) GetCounterMetricValue(metricName string) (int64, bool) {
-	i.mx.RLock()
-	defer i.mx.RUnlock()
-	val, ok := i.CounterMetrics[metricName]
-	return val, ok
-}
-
-func (i *InMemoryRepo) UpdateGaugeMetricValue(metricName string, metricValue float64) float64 {
-	i.mx.Lock()
-	defer i.mx.Unlock()
-	i.GaugeMetrics[metricName] = metricValue
-	return metricValue
-}
-
-func (i *InMemoryRepo) UpdateCounterMetricValue(metricName string, metricValue int64) int64 {
-	i.mx.Lock()
-	defer i.mx.Unlock()
-
-	val, ok := i.CounterMetrics[metricName]
-
-	if !ok {
-		val = metricValue
-	} else {
-		val += metricValue
+	var ouputMetric *repository.Metric
+	for _, savedMetric := range i.metrics {
+		if savedMetric.ID == metric.ID {
+			ouputMetric = &savedMetric
+			break
+		}
 	}
 
-	i.CounterMetrics[metricName] = val
-	return val
+	if ouputMetric == nil {
+		i.metrics = append(i.metrics, *metric)
+		return metric
+	}
+
+	switch metric.MType {
+	case repository.GaugeMetricKey:
+		ouputMetric.Value = metric.Value
+		break
+	case repository.CounterMetricKey:
+		sum := (*ouputMetric.Delta) + (*metric.Delta)
+		ouputMetric.Delta = &sum
+		break
+	}
+
+	return ouputMetric
 }
 
-func (i *InMemoryRepo) GetAllGaugeMetrics() map[string]float64 {
+func (i *InMemoryRepo) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
 	i.mx.Lock()
 	defer i.mx.Unlock()
-	return i.GaugeMetrics
+
+	for _, savedMetric := range i.metrics {
+		if savedMetric.ID == metricName &&
+			savedMetric.MType == metricType {
+			return &savedMetric, true
+		}
+	}
+
+	return nil, false
 }
 
-func (i *InMemoryRepo) GetAllCounterMetrics() map[string]int64 {
+func (i *InMemoryRepo) GetAllMetricsByType(metricType string) []repository.Metric {
 	i.mx.Lock()
 	defer i.mx.Unlock()
-	return i.CounterMetrics
+	output := make([]repository.Metric, 0)
+
+	for _, savedMetric := range i.metrics {
+		if savedMetric.MType == metricType {
+			output = append(output, savedMetric)
+		}
+	}
+
+	return output
 }
 
 func (i *InMemoryRepo) CloseRepository() {

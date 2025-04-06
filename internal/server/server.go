@@ -39,8 +39,8 @@ func (s *Server) createRouter() chi.Router {
 			r.Get("/{metricType}/{metricName}", s.Handlers.GetMetricByName)
 		})
 		r.Route("/update", func(r chi.Router) {
-			r.Post("/", s.Handlers.UpdateMetricForJSON)
-			r.Post("/{key}/{merticName}/{metricValue}", s.Handlers.UpdateMetric)
+			r.Post("/", s.Handlers.UpdateMetricFromJSON)
+			r.Post("/{metricType}/{merticName}/{metricValue}", s.Handlers.UpdateMetric)
 		})
 	})
 	return r
