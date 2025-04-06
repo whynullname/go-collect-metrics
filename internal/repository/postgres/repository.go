@@ -146,7 +146,7 @@ func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *reposito
 
 	if !ok {
 		val = metric
-		_, err := p.db.ExecContext(context.Background(), "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", val.ID, val.Delta)
+		_, err := p.db.ExecContext(context.Background(), "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", val.ID, *val.Delta)
 		if err != nil {
 			logger.Log.Error(err)
 			return nil
@@ -154,7 +154,7 @@ func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *reposito
 	} else {
 		newDelta := (*metric.Delta) + (*val.Delta)
 		val.Delta = &newDelta
-		_, err := p.db.ExecContext(context.Background(), "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", val.Delta, val.ID)
+		_, err := p.db.ExecContext(context.Background(), "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", *val.Delta, val.ID)
 		if err != nil {
 			logger.Log.Error(err)
 			return nil
@@ -191,6 +191,7 @@ func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.
 	stmt := p.GetSelectStmtByMetricType(metricType)
 	row := stmt.QueryRowContext(context.Background(), metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
+	output.ID = metricName
 	return output, err == nil
 }
 

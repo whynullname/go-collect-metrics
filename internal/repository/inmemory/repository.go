@@ -20,30 +20,25 @@ func NewInMemoryRepository() *InMemoryRepo {
 func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metric {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
-	var ouputMetric *repository.Metric
-	for _, savedMetric := range i.metrics {
+	for j, savedMetric := range i.metrics {
 		if savedMetric.ID == metric.ID {
-			ouputMetric = &savedMetric
-			break
+			switch metric.MType {
+			case repository.GaugeMetricKey:
+				savedMetric.Value = metric.Value
+				i.metrics[j] = savedMetric
+				break
+			case repository.CounterMetricKey:
+				sum := (*savedMetric.Delta) + (*metric.Delta)
+				savedMetric.Delta = &sum
+				i.metrics[j] = savedMetric
+				break
+			}
+			return &savedMetric
 		}
 	}
 
-	if ouputMetric == nil {
-		i.metrics = append(i.metrics, *metric)
-		return metric
-	}
-
-	switch metric.MType {
-	case repository.GaugeMetricKey:
-		ouputMetric.Value = metric.Value
-		break
-	case repository.CounterMetricKey:
-		sum := (*ouputMetric.Delta) + (*metric.Delta)
-		ouputMetric.Delta = &sum
-		break
-	}
-
-	return ouputMetric
+	i.metrics = append(i.metrics, *metric)
+	return metric
 }
 
 func (i *InMemoryRepo) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
