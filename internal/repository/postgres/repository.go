@@ -219,14 +219,12 @@ func (p *Postgres) GetAllMetricsByType(metricType string) []repository.Metric {
 				logger.Log.Error(err)
 				return output
 			}
-			break
 		case repository.CounterMetricKey:
 			rows.Scan(&metric.ID, &metric.Delta)
 			if err != nil {
 				logger.Log.Error(err)
 				return output
 			}
-			break
 		}
 
 		output = append(output, metric)

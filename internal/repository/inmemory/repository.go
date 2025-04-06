@@ -26,12 +26,10 @@ func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metri
 			case repository.GaugeMetricKey:
 				savedMetric.Value = metric.Value
 				i.metrics[j] = savedMetric
-				break
 			case repository.CounterMetricKey:
 				sum := (*savedMetric.Delta) + (*metric.Delta)
 				savedMetric.Delta = &sum
 				i.metrics[j] = savedMetric
-				break
 			}
 			return &savedMetric
 		}

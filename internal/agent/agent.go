@@ -78,20 +78,20 @@ func (a *Agent) UpdateMetrics() {
 	a.UpdateCounterMetricValue("PollCount", int64(1))
 }
 
-func (a *Agent) UpdateGaugeMetricValue(metricId string, value float64) {
+func (a *Agent) UpdateGaugeMetricValue(metricID string, value float64) {
 	metric := repository.Metric{
 		MType: repository.GaugeMetricKey,
 		Value: &value,
-		ID:    metricId,
+		ID:    metricID,
 	}
 	a.metricsUseCase.UpdateMetric(&metric)
 }
 
-func (a *Agent) UpdateCounterMetricValue(metricId string, value int64) {
+func (a *Agent) UpdateCounterMetricValue(metricID string, value int64) {
 	metric := repository.Metric{
 		MType: repository.CounterMetricKey,
 		Delta: &value,
-		ID:    metricId,
+		ID:    metricID,
 	}
 	a.metricsUseCase.UpdateMetric(&metric)
 }
@@ -154,7 +154,6 @@ func (a *Agent) sendPostResponseWithMetrics(metrics []repository.Metric) {
 		switch metric.MType {
 		case repository.CounterMetricKey:
 			metricValue = strconv.FormatInt(*metric.Delta, 10)
-			break
 		case repository.GaugeMetricKey:
 			metricValue = strconv.FormatFloat(*metric.Value, 'f', 2, 64)
 		}

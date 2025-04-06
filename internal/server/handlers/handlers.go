@@ -106,7 +106,6 @@ func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			Delta: &value,
 			ID:    metricName,
 		}
-		break
 	case repository.GaugeMetricKey:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
@@ -119,7 +118,6 @@ func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			Value: &value,
 			ID:    metricName,
 		}
-		break
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -232,7 +230,6 @@ func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	switch metricType {
 	case repository.CounterMetricKey:
 		io.WriteString(w, fmt.Sprintf("%d", *val.Delta))
-		break
 	case repository.GaugeMetricKey:
 		io.WriteString(w, strconv.FormatFloat(*val.Value, 'f', -1, 64))
 	}

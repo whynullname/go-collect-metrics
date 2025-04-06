@@ -51,15 +51,7 @@ func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 	defer s.mx.RUnlock()
 	gaugeMetrics := repo.GetAllMetricsByType(repository.GaugeMetricKey)
 	counterMetrics := repo.GetAllMetricsByType(repository.CounterMetricKey)
-
-	outputMetrics := make([]repository.Metric, 0)
-	for _, metricValue := range gaugeMetrics {
-		outputMetrics = append(outputMetrics, metricValue)
-	}
-	for _, metricValue := range counterMetrics {
-		outputMetrics = append(outputMetrics, metricValue)
-	}
-
+	outputMetrics := append(gaugeMetrics, counterMetrics...)
 	s.file.Seek(0, 0)
 	s.file.Truncate(0)
 	defer s.file.Sync()
