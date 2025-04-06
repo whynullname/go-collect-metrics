@@ -31,7 +31,7 @@ func main() {
 	}
 	defer repo.CloseRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	server := server.NewServer(metricsUseCase, cfg, postgressRepo)
+	server := server.NewServer(metricsUseCase, cfg, repo.PingRepo)
 	fileStorage, err := filestorage.NewFileStorage(cfg.FileStoragePath)
 
 	if err != nil {

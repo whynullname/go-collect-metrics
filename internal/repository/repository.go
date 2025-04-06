@@ -7,8 +7,10 @@ const (
 
 type Repository interface {
 	UpdateMetric(metric *Metric) *Metric
+	UpdateMetrics(metrics []Metric) ([]Metric, error)
 	GetMetric(metricName string, metricType string) (*Metric, bool)
 	GetAllMetricsByType(metricType string) []Metric
+	PingRepo() bool
 	CloseRepository()
 }
 

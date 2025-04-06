@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,12 +9,10 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
-	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
 	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -47,13 +44,13 @@ const (
 
 type Handlers struct {
 	metricsUseCase *metrics.MetricsUseCase
-	postgres       *postgres.Postgres //Сделано тестово для 10 инкремента, обязательно нужно сдеалть нормальным репозиторием
+	pingRepoFunc   func() bool
 }
 
-func NewHandlers(metricsUseCase *metrics.MetricsUseCase, postgres *postgres.Postgres) *Handlers {
+func NewHandlers(metricsUseCase *metrics.MetricsUseCase, pingRepoFunc func() bool) *Handlers {
 	return &Handlers{
 		metricsUseCase: metricsUseCase,
-		postgres:       postgres,
+		pingRepoFunc:   pingRepoFunc,
 	}
 }
 
@@ -147,23 +144,28 @@ func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) 
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		logger.Log.Error(err)
+		logger.Log.Error("Error while read from body %w", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	err = json.Unmarshal(body, &metricJSON)
-	if err != nil {
+	if err == nil {
+		h.UpdateSingleJSONMetric(w, r, &metricJSON)
+	} else {
 		metrics := make([]repository.Metric, 0)
 		err = json.Unmarshal(body, &metrics)
 
-		if err != nil {
-			logger.Log.Infof("Error while read from body %w", err)
+		if err == nil {
+			h.UpdateArrayJSONMetrics(w, r, metrics)
+		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
 		}
 	}
+}
 
-	updatedMetric, err := h.metricsUseCase.UpdateMetric(&metricJSON)
+func (h *Handlers) UpdateSingleJSONMetric(w http.ResponseWriter, r *http.Request, metric *repository.Metric) {
+	updatedMetric, err := h.metricsUseCase.UpdateMetric(metric)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
 		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
@@ -186,36 +188,18 @@ func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) 
 	w.Write(output)
 }
 
-func (h *Handlers) UpdateArrayMetrics(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request, metricsJSON []repository.Metric) {
+	outputMetric, err := h.metricsUseCase.UpdateMetrics(metricsJSON)
 	if err != nil {
-		logger.Log.Infof("Error while read from body %w", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+		logger.Log.Errorf("Error with update metrics: %w", err)
 
-	var metricsJSON []repository.Metric
-	err = json.Unmarshal(body, &metricsJSON)
-	if err != nil {
-		logger.Log.Infof("Error %w", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	outputMetric := make([]repository.Metric, 0)
-	for _, metric := range metricsJSON {
-		metric, err := h.metricsUseCase.UpdateMetric(&metric)
-		if err != nil {
-			logger.Log.Errorf("Error with update metrics: %w", err)
-
-			if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
-			w.WriteHeader(http.StatusInternalServerError)
+		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		outputMetric = append(outputMetric, *metric)
+
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	output, err := json.Marshal(outputMetric)
@@ -300,15 +284,10 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 	w.Write(resp)
 }
 
-func (h *Handlers) PingPostgres(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	if err := h.postgres.DB.PingContext(ctx); err != nil {
-		logger.Log.Info(h.postgres.Adress)
+func (h *Handlers) PingRepository(w http.ResponseWriter, r *http.Request) {
+	if h.pingRepoFunc() {
+		w.WriteHeader(http.StatusOK)
+	} else {
 		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }

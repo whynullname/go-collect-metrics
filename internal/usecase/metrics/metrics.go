@@ -31,6 +31,20 @@ func (m *MetricsUseCase) UpdateMetric(json *repository.Metric) (*repository.Metr
 	return metric, nil
 }
 
+func (m *MetricsUseCase) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+	for _, metric := range metrics {
+		if metric.Delta == nil && metric.Value == nil {
+			return nil, types.ErrMetricNilValue
+		}
+
+		if metric.MType != repository.CounterMetricKey && metric.MType != repository.GaugeMetricKey {
+			return nil, types.ErrUnsupportedMetricType
+		}
+	}
+
+	return m.repository.UpdateMetrics(metrics)
+}
+
 func (m *MetricsUseCase) GetMetric(metricType string, metricName string) (*repository.Metric, error) {
 	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
 		return nil, types.ErrUnsupportedMetricType

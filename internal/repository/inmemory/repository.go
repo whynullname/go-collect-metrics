@@ -46,6 +46,14 @@ func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metri
 	return ouputMetric
 }
 
+func (i *InMemoryRepo) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+	output := make([]repository.Metric, 0)
+	for _, metric := range metrics {
+		output = append(output, *i.UpdateMetric(&metric))
+	}
+	return output, nil
+}
+
 func (i *InMemoryRepo) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
 	i.mx.Lock()
 	defer i.mx.Unlock()
@@ -76,4 +84,8 @@ func (i *InMemoryRepo) GetAllMetricsByType(metricType string) []repository.Metri
 
 func (i *InMemoryRepo) CloseRepository() {
 
+}
+
+func (i *InMemoryRepo) PingRepo() bool {
+	return true
 }

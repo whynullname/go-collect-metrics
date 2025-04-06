@@ -45,7 +45,7 @@ func updateAndSendMetrics(instance *agent.Agent) {
 		if secondPassed >= time.Duration(instance.Config.ReportInterval)*time.Second {
 			secondPassed = time.Duration(0)
 			logger.Log.Info("Send metrics")
-			instance.SendMetricsByJSON()
+			instance.SendAllMetricsByJSONArray()
 		}
 	}
 }
