@@ -230,6 +230,10 @@ func (p *Postgres) GetAllMetricsByType(metricType string) []repository.Metric {
 		output = append(output, metric)
 	}
 
+	err = rows.Err()
+	if err != nil {
+		logger.Log.Error(err)
+	}
 	return output
 }
 

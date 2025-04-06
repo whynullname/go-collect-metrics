@@ -80,5 +80,5 @@ func (i *InMemoryRepo) CloseRepository() {
 }
 
 func (i *InMemoryRepo) PingRepo() bool {
-	return true
+	return false
 }
