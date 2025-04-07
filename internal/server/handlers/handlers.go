@@ -148,22 +148,12 @@ func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) 
 	}
 
 	err = json.Unmarshal(body, &metricJSON)
-	if err == nil {
-		h.UpdateSingleJSONMetric(w, r, &metricJSON)
-	} else {
-		metrics := make([]repository.Metric, 0)
-		err = json.Unmarshal(body, &metrics)
-
-		if err == nil {
-			h.UpdateArrayJSONMetrics(w, r, metrics)
-		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-}
 
-func (h *Handlers) UpdateSingleJSONMetric(w http.ResponseWriter, r *http.Request, metric *repository.Metric) {
-	updatedMetric, err := h.metricsUseCase.UpdateMetric(metric)
+	updatedMetric, err := h.metricsUseCase.UpdateMetric(&metricJSON)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
 		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
@@ -186,8 +176,30 @@ func (h *Handlers) UpdateSingleJSONMetric(w http.ResponseWriter, r *http.Request
 	w.Write(output)
 }
 
-func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request, metricsJSON []repository.Metric) {
-	outputMetric, err := h.metricsUseCase.UpdateMetrics(metricsJSON)
+func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType != "" && contentType != "application/json" {
+		logger.Log.Info("Content type not application/json, return!")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var metrics []repository.Metric
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &metrics)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	outputMetrics, err := h.metricsUseCase.UpdateMetrics(metrics)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
 
@@ -200,7 +212,7 @@ func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	output, err := json.Marshal(outputMetric)
+	output, err := json.Marshal(outputMetrics)
 	if err != nil {
 		logger.Log.Errorf("Error with marshal output JSON: %w", err)
 		w.WriteHeader(http.StatusInternalServerError)

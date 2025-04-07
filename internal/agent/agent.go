@@ -103,16 +103,16 @@ func (a *Agent) SendMetrics() {
 	a.sendPostResponseWithMetrics(jsonArray)
 }
 
-func (a *Agent) SendAllMetricsByJSONArray() {
+func (a *Agent) SendAllMetricsByArray() {
 	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
 	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
 	jsonArray := append(gaugeMetrics, counterMetrics...)
-	jsonBytes, err := json.Marshal(jsonArray)
+	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
+	newRequest := a.Client.R().SetBody(jsonArray)
+	_, err := newRequest.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
-		return
 	}
-	a.sendJSONWithEncoding(jsonBytes)
 }
 
 func (a *Agent) SendMetricsByJSON() {
@@ -143,7 +143,6 @@ func (a *Agent) sendJSONWithEncoding(json []byte) {
 	_, err := newRequest.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
-		return
 	}
 }
 
