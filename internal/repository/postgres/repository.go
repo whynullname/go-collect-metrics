@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"sync"
 	"time"
 
 	"github.com/whynullname/go-collect-metrics/internal/logger"
@@ -14,7 +13,6 @@ type Postgres struct {
 	db                      *sql.DB
 	selectGaugeMetricStmt   *sql.Stmt
 	selectCounterMetricStmt *sql.Stmt
-	mx                      sync.RWMutex
 }
 
 const (
@@ -64,9 +62,6 @@ func NewPostgresRepo(adress string) *Postgres {
 }
 
 func (p *Postgres) UpdateMetric(metric *repository.Metric) *repository.Metric {
-	p.mx.RLock()
-	defer p.mx.RUnlock()
-
 	switch metric.MType {
 	case repository.GaugeMetricKey:
 		return p.UpdateGaugeMetric(metric)
@@ -77,9 +72,6 @@ func (p *Postgres) UpdateMetric(metric *repository.Metric) *repository.Metric {
 }
 
 func (p *Postgres) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
-	p.mx.RLock()
-	defer p.mx.RUnlock()
-
 	output := make([]repository.Metric, 0)
 	tx, err := p.db.Begin()
 	if err != nil {
@@ -196,9 +188,6 @@ func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository
 }
 
 func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
 	stmt := p.GetSelectStmtByMetricType(metricType)
 	row := stmt.QueryRowContext(context.Background(), metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
@@ -207,9 +196,6 @@ func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.
 }
 
 func (p *Postgres) GetAllMetricsByType(metricType string) []repository.Metric {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
 	output := make([]repository.Metric, 0)
 	tableName := ""
 	switch metricType {

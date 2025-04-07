@@ -40,6 +40,9 @@ func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metri
 }
 
 func (i *InMemoryRepo) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+	i.mx.RLock()
+	defer i.mx.RUnlock()
+
 	output := make([]repository.Metric, 0)
 	for _, metric := range metrics {
 		output = append(output, *i.UpdateMetric(&metric))
