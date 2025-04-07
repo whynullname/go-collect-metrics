@@ -203,7 +203,6 @@ func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType str
 
 func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
 	stmt := p.GetSelectStmtByMetricType(metricType)
-	defer stmt.Close()
 	row := stmt.QueryRowContext(context.Background(), metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
