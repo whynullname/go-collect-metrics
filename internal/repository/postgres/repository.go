@@ -165,7 +165,7 @@ func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *reposito
 }
 
 func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository.Metric) *repository.Metric {
-	val, ok := p.GetMetric(metric.ID, metric.MType)
+	val, ok := p.GetMetricWithTX(tx, metric.ID, metric.MType)
 
 	if !ok {
 		val = metric
@@ -187,8 +187,23 @@ func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository
 	return val
 }
 
+func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType string) (*repository.Metric, bool) {
+	metricTableName := ""
+	switch metricType {
+	case repository.CounterMetricKey:
+		metricTableName = CounterMetricsTableName
+	case repository.GaugeMetricKey:
+		metricTableName = GaugeMetricsTableName
+	}
+	row := tx.QueryRowContext(context.Background(), "SELECT metric_value FROM "+metricTableName+" WHERE metric_id = $1", metricName)
+	output, err := p.ScanMetricByMetricType(row, metricType)
+	output.ID = metricName
+	return output, err == nil
+}
+
 func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
 	stmt := p.GetSelectStmtByMetricType(metricType)
+	defer stmt.Close()
 	row := stmt.QueryRowContext(context.Background(), metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
