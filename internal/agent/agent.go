@@ -99,7 +99,7 @@ func (a *Agent) UpdateCounterMetricValue(metricID string, value int64) {
 func (a *Agent) SendMetrics() {
 	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
 	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
-	jsonArray := append(gaugeMetrics, counterMetrics...)
+	jsonArray := append(counterMetrics, gaugeMetrics...)
 	a.sendPostResponseWithMetrics(jsonArray)
 }
 

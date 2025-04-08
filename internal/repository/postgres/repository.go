@@ -3,8 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 )
@@ -72,22 +75,42 @@ func (p *Postgres) UpdateMetric(metric *repository.Metric) *repository.Metric {
 }
 
 func (p *Postgres) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+	duration := time.Duration(1) * time.Second
+	var err error
+	for i := 0; i < 3; i++ {
+		output, err := p.UpdateWithRetries(metrics)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			ticker := time.NewTicker(duration)
+			<-ticker.C
+			duration += time.Duration(2) * time.Second
+			ticker.Stop()
+		} else {
+			return output, err
+		}
+	}
+
+	return nil, err
+}
+
+func (p *Postgres) UpdateWithRetries(metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	tx, err := p.db.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Commit()
 
 	for _, metric := range metrics {
 		var ouputMetric *repository.Metric
 		switch metric.MType {
 		case repository.GaugeMetricKey:
-			ouputMetric = p.UpdateGaugeMetricWithTx(tx, &metric)
+			ouputMetric, err = p.UpdateGaugeMetricWithTx(tx, &metric)
 		case repository.CounterMetricKey:
-			ouputMetric = p.UpdateCounterMetricValueWithTx(tx, &metric)
+			ouputMetric, err = p.UpdateCounterMetricValueWithTx(tx, &metric)
 		}
 
-		if ouputMetric == nil {
+		if err != nil {
 			tx.Rollback()
 			return nil, err
 		} else {
@@ -95,7 +118,6 @@ func (p *Postgres) UpdateMetrics(metrics []repository.Metric) ([]repository.Metr
 		}
 	}
 
-	tx.Commit()
 	return output, nil
 }
 
@@ -120,12 +142,12 @@ func (p *Postgres) UpdateGaugeMetric(metric *repository.Metric) *repository.Metr
 	return metric
 }
 
-func (p *Postgres) UpdateGaugeMetricWithTx(tx *sql.Tx, metric *repository.Metric) *repository.Metric {
+func (p *Postgres) UpdateGaugeMetricWithTx(tx *sql.Tx, metric *repository.Metric) (*repository.Metric, error) {
 	res, err := tx.ExecContext(context.Background(), "UPDATE "+GaugeMetricsTableName+` 
 	SET metric_value = $1 WHERE metric_id = $2`, metric.Value, metric.ID)
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
 	if rows, _ := res.RowsAffected(); rows == 0 {
@@ -134,11 +156,11 @@ func (p *Postgres) UpdateGaugeMetricWithTx(tx *sql.Tx, metric *repository.Metric
 		VALUES ($1, $2)`, metric.ID, metric.Value)
 		if err != nil {
 			logger.Log.Error(err)
-			return nil
+			return nil, err
 		}
 	}
 
-	return metric
+	return metric, nil
 }
 
 func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *repository.Metric {
@@ -164,7 +186,7 @@ func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *reposito
 	return val
 }
 
-func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository.Metric) *repository.Metric {
+func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository.Metric) (*repository.Metric, error) {
 	val, ok := p.GetMetricWithTX(tx, metric.ID, metric.MType)
 
 	if !ok {
@@ -172,7 +194,7 @@ func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository
 		_, err := tx.ExecContext(context.Background(), "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", val.ID, val.Delta)
 		if err != nil {
 			logger.Log.Error(err)
-			return nil
+			return nil, err
 		}
 	} else {
 		newDelta := (*metric.Delta) + (*val.Delta)
@@ -180,11 +202,11 @@ func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository
 		_, err := tx.ExecContext(context.Background(), "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", val.Delta, val.ID)
 		if err != nil {
 			logger.Log.Error(err)
-			return nil
+			return nil, err
 		}
 	}
 
-	return val
+	return val, nil
 }
 
 func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType string) (*repository.Metric, bool) {
