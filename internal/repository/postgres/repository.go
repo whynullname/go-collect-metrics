@@ -220,6 +220,7 @@ func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType str
 	row := tx.QueryRowContext(context.Background(), "SELECT metric_value FROM "+metricTableName+" WHERE metric_id = $1", metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
+	output.MType = metricType
 	return output, err == nil
 }
 
@@ -228,6 +229,7 @@ func (p *Postgres) GetMetric(metricName string, metricType string) (*repository.
 	row := stmt.QueryRowContext(context.Background(), metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
+	output.MType = metricType
 	return output, err == nil
 }
 
