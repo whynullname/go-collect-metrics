@@ -7,6 +7,7 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares/compressmiddleware"
+	"github.com/whynullname/go-collect-metrics/internal/middlewares/shamiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/server/handlers"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
@@ -28,7 +29,7 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
-	registerMiddlewares(r)
+	s.registerMiddlewares(r)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.Handlers.GetAllMetrics)
@@ -48,9 +49,11 @@ func (s *Server) createRouter() chi.Router {
 	return r
 }
 
-func registerMiddlewares(r chi.Router) {
+func (s *Server) registerMiddlewares(r chi.Router) {
+	shamiddleware.Cfg = s.Config
 	r.Use(middlewares.Logging)
 	r.Use(compressmiddleware.GZIP)
+	r.Use(shamiddleware.HashSHA256)
 }
 
 func (s *Server) ListenAndServe() error {

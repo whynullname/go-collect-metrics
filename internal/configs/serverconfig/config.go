@@ -15,6 +15,7 @@ type ServerConfig struct {
 	FileStoragePath string
 	RestoreData     bool
 	PostgressAdress string
+	HashKey         string
 }
 
 func NewServerConfig() *ServerConfig {
@@ -39,6 +40,7 @@ func (s *ServerConfig) registerFlags() {
 	flag.StringVar(&s.FileStoragePath, "f", "metrics.json", "path to save metrics")
 	flag.BoolVar(&s.RestoreData, "r", true, "need load saved data in start")
 	flag.StringVar(&s.PostgressAdress, "d", fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", `localhost`, `videos`, `XXXXXXXX`, `videos`), "adress to connect postgres")
+	flag.StringVar(&s.HashKey, "k", "", "key for sha hash")
 }
 
 func (s *ServerConfig) checkEnvAddr() {
@@ -74,5 +76,9 @@ func (s *ServerConfig) checkEnvAddr() {
 
 	if postgresAdress := os.Getenv("DATABASE_DSN"); postgresAdress != "" {
 		s.PostgressAdress = postgresAdress
+	}
+
+	if hashKey := os.Getenv("KEY"); hashKey != "" {
+		s.HashKey = hashKey
 	}
 }

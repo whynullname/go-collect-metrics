@@ -10,6 +10,7 @@ type AgentConfig struct {
 	EndPointAdress string
 	ReportInterval int
 	PollInterval   int
+	HashKey        string
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -34,6 +35,7 @@ func (a *AgentConfig) registerFlags() {
 	flag.StringVar(&a.EndPointAdress, "a", "localhost:8080", "address and port to server for send metrics")
 	flag.IntVar(&a.ReportInterval, "r", 10, "frequency of sending metrics to the server")
 	flag.IntVar(&a.PollInterval, "p", 2, "frequency of polling metrics from the runtime package")
+	flag.StringVar(&a.HashKey, "k", "", "key for sha hash")
 }
 
 func (a *AgentConfig) checkEnv() {
@@ -55,5 +57,9 @@ func (a *AgentConfig) checkEnv() {
 		if err != nil {
 			a.PollInterval = int(i)
 		}
+	}
+
+	if hashKey := os.Getenv("KEY"); hashKey != "" {
+		a.HashKey = hashKey
 	}
 }

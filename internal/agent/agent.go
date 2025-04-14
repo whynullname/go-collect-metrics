@@ -3,6 +3,9 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -110,6 +113,26 @@ func (a *Agent) SendAllMetricsByArray() {
 	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
 	newRequest := a.Client.R().SetBody(jsonArray)
 	_, err := newRequest.Post(url)
+	if err != nil {
+		logger.Log.Infof("error %s", err.Error())
+	}
+}
+
+func (a *Agent) SendAllMetricByArrayAndSHA() {
+	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
+	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	jsonArray := append(gaugeMetrics, counterMetrics...)
+	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
+	hash := hmac.New(sha256.New, []byte(a.Config.HashKey))
+	jsonBytes, err := json.Marshal(jsonArray)
+	if err != nil {
+		logger.Log.Infof("error %s", err.Error())
+	}
+	hash.Write(jsonBytes)
+	requestHash := hex.EncodeToString(hash.Sum(nil))
+	newRequest := a.Client.R().SetBody(jsonArray).
+		SetHeader("HashSHA256", string(requestHash))
+	_, err = newRequest.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
 	}
