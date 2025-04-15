@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -23,37 +24,35 @@ const (
 	CounterMetricsTableName = "counter_metrics"
 )
 
-func NewPostgresRepo(adress string) *Postgres {
+func NewPostgresRepo(adress string) (*Postgres, error) {
 	db, err := sql.Open("pgx", adress)
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
-	_, err = db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+GaugeMetricsTableName+
-		"(metric_id varchar(150) NOT NULL, metric_value double precision NOT NULL)")
+	err = CreateTable(db, GaugeMetricsTableName)
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
-	_, err = db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+CounterMetricsTableName+
-		"(metric_id varchar(150) NOT NULL, metric_value bigint NOT NULL)")
+	err = CreateTable(db, CounterMetricsTableName)
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
 	selectGaugeStmt, err := db.PrepareContext(context.Background(), "SELECT metric_value FROM "+GaugeMetricsTableName+" WHERE metric_id = $1")
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
 	selectCounterStmt, err := db.PrepareContext(context.Background(), "SELECT metric_value FROM "+CounterMetricsTableName+" WHERE metric_id = $1")
 	if err != nil {
 		logger.Log.Error(err)
-		return nil
+		return nil, err
 	}
 
 	instance := Postgres{
@@ -61,7 +60,18 @@ func NewPostgresRepo(adress string) *Postgres {
 		selectGaugeMetricStmt:   selectGaugeStmt,
 		selectCounterMetricStmt: selectCounterStmt,
 	}
-	return &instance
+	return &instance, nil
+}
+
+func CreateTable(db *sql.DB, tableName string) error {
+	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+tableName+
+		"(metric_id varchar(150) NOT NULL, metric_value double precision NOT NULL)")
+	if err != nil {
+		logger.Log.Error(err)
+		return err
+	}
+
+	return nil
 }
 
 func (p *Postgres) UpdateMetric(metric *repository.Metric) *repository.Metric {
@@ -75,31 +85,36 @@ func (p *Postgres) UpdateMetric(metric *repository.Metric) *repository.Metric {
 }
 
 func (p *Postgres) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
-	duration := time.Duration(1) * time.Second
-	var err error
-	for i := 0; i < 3; i++ {
-		output, err := p.UpdateWithRetries(metrics)
+	return retry(3, 1*time.Second, func() ([]repository.Metric, error) {
+		return p.UpdateWithRetries(metrics)
+	})
+}
+
+func retry[T any](attempts int, delay time.Duration, operation func() (T, error)) (T, error) {
+	var zero T
+	for i := 0; i < attempts; i++ {
+		result, err := operation()
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			ticker := time.NewTicker(duration)
-			<-ticker.C
-			duration += time.Duration(2) * time.Second
-			ticker.Stop()
-		} else {
-			return output, err
+			time.Sleep(delay)
+			delay += 2 * time.Second
+			continue
 		}
+		return result, err
 	}
-
-	return nil, err
+	return zero, fmt.Errorf("retry failed after %d attempts", attempts)
 }
 
 func (p *Postgres) UpdateWithRetries(metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	tx, err := p.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Commit()
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
 	for _, metric := range metrics {
 		var ouputMetric *repository.Metric
@@ -111,7 +126,6 @@ func (p *Postgres) UpdateWithRetries(metrics []repository.Metric) ([]repository.
 		}
 
 		if err != nil {
-			tx.Rollback()
 			return nil, err
 		} else {
 			output = append(output, *ouputMetric)

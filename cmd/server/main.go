@@ -24,9 +24,9 @@ func main() {
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
-	postgressRepo := postgres.NewPostgresRepo(cfg.PostgressAdress)
+	postgressRepo, err := postgres.NewPostgresRepo(cfg.PostgressAdress)
 	var repo repository.Repository = postgressRepo
-	if postgressRepo == nil {
+	if err != nil {
 		repo = inmemory.NewInMemoryRepository()
 	}
 	defer repo.CloseRepository()
