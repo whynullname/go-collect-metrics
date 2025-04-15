@@ -31,13 +31,13 @@ func NewPostgresRepo(adress string) (*Postgres, error) {
 		return nil, err
 	}
 
-	err = CreateTable(db, GaugeMetricsTableName)
+	err = CreateTable(db, GaugeMetricsTableName, "double precision")
 	if err != nil {
 		logger.Log.Error(err)
 		return nil, err
 	}
 
-	err = CreateTable(db, CounterMetricsTableName)
+	err = CreateTable(db, CounterMetricsTableName, "BIGINT")
 	if err != nil {
 		logger.Log.Error(err)
 		return nil, err
@@ -63,9 +63,9 @@ func NewPostgresRepo(adress string) (*Postgres, error) {
 	return &instance, nil
 }
 
-func CreateTable(db *sql.DB, tableName string) error {
+func CreateTable(db *sql.DB, tableName string, valueType string) error {
 	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+tableName+
-		"(metric_id varchar(150) NOT NULL, metric_value double precision NOT NULL)")
+		"(metric_id varchar(150) NOT NULL, metric_value "+valueType+" NOT NULL)")
 	if err != nil {
 		logger.Log.Error(err)
 		return err
@@ -108,6 +108,10 @@ func retry[T any](attempts int, delay time.Duration, operation func() (T, error)
 func (p *Postgres) UpdateWithRetries(metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	tx, err := p.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
 	defer func() {
 		if err != nil {
 			_ = tx.Rollback()
@@ -201,7 +205,7 @@ func (p *Postgres) UpdateCounterMetricValue(metric *repository.Metric) *reposito
 }
 
 func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository.Metric) (*repository.Metric, error) {
-	val, ok := p.GetMetricWithTX(tx, metric.ID, metric.MType)
+	val, ok := p.GetMetricWithTX(tx, metric.ID, metric.MType, CounterMetricsTableName)
 
 	if !ok {
 		val = metric
@@ -223,14 +227,7 @@ func (p *Postgres) UpdateCounterMetricValueWithTx(tx *sql.Tx, metric *repository
 	return val, nil
 }
 
-func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType string) (*repository.Metric, bool) {
-	metricTableName := ""
-	switch metricType {
-	case repository.CounterMetricKey:
-		metricTableName = CounterMetricsTableName
-	case repository.GaugeMetricKey:
-		metricTableName = GaugeMetricsTableName
-	}
+func (p *Postgres) GetMetricWithTX(tx *sql.Tx, metricName string, metricType string, metricTableName string) (*repository.Metric, bool) {
 	row := tx.QueryRowContext(context.Background(), "SELECT metric_value FROM "+metricTableName+" WHERE metric_id = $1", metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
