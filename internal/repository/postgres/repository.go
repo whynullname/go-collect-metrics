@@ -31,13 +31,13 @@ func NewPostgresRepo(adress string) (*Postgres, error) {
 		return nil, err
 	}
 
-	err = CreateTable(db, GaugeMetricsTableName, "double precision")
+	err = MigrateTable(db, GaugeMetricsTableName, "double precision")
 	if err != nil {
 		logger.Log.Error(err)
 		return nil, err
 	}
 
-	err = CreateTable(db, CounterMetricsTableName, "BIGINT")
+	err = MigrateTable(db, CounterMetricsTableName, "BIGINT")
 	if err != nil {
 		logger.Log.Error(err)
 		return nil, err
@@ -63,7 +63,7 @@ func NewPostgresRepo(adress string) (*Postgres, error) {
 	return &instance, nil
 }
 
-func CreateTable(db *sql.DB, tableName string, valueType string) error {
+func MigrateTable(db *sql.DB, tableName string, valueType string) error {
 	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+tableName+
 		"(metric_id varchar(150) NOT NULL, metric_value "+valueType+" NOT NULL)")
 	if err != nil {
