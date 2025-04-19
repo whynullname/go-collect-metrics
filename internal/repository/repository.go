@@ -8,10 +8,10 @@ const (
 )
 
 type Repository interface {
-	UpdateMetric(ctx context.Context, metric *Metric) *Metric
+	UpdateMetric(ctx context.Context, metric *Metric) (*Metric, error)
 	UpdateMetrics(ctx context.Context, metrics []Metric) ([]Metric, error)
-	GetMetric(ctx context.Context, metricName string, metricType string) (*Metric, bool)
-	GetAllMetricsByType(ctx context.Context, metricType string) []Metric
+	GetMetric(ctx context.Context, metricName string, metricType string) (*Metric, error)
+	GetAllMetricsByType(ctx context.Context, metricType string) ([]Metric, error)
 	PingRepo() bool
 	CloseRepository()
 }

@@ -98,27 +98,47 @@ func (a *Agent) UpdateCounterMetricValue(metricID string, value int64) {
 }
 
 func (a *Agent) SendMetrics() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
 	jsonArray := append(counterMetrics, gaugeMetrics...)
 	a.sendPostResponseWithMetrics(jsonArray)
 }
 
 func (a *Agent) SendAllMetricsByArray() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
+
 	jsonArray := append(gaugeMetrics, counterMetrics...)
 	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
 	newRequest := a.Client.R().SetBody(jsonArray)
-	_, err := newRequest.Post(url)
+	_, err = newRequest.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
 	}
 }
 
 func (a *Agent) SendMetricsByJSON() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
+
 	jsonArray := append(gaugeMetrics, counterMetrics...)
 	for _, metric := range jsonArray {
 		jsonBytes, err := json.Marshal(metric)

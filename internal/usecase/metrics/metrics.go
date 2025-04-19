@@ -26,11 +26,7 @@ func (m *MetricsUseCase) UpdateMetric(ctx context.Context, json *repository.Metr
 		return nil, types.ErrUnsupportedMetricType
 	}
 
-	metric := m.repository.UpdateMetric(ctx, json)
-	if metric == nil {
-		return nil, types.ErrWileUpdateMetric
-	}
-	return metric, nil
+	return m.repository.UpdateMetric(ctx, json)
 }
 
 func (m *MetricsUseCase) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
@@ -52,13 +48,9 @@ func (m *MetricsUseCase) GetMetric(ctx context.Context, metricType string, metri
 		return nil, types.ErrUnsupportedMetricType
 	}
 
-	metric, ok := m.repository.GetMetric(ctx, metricName, metricType)
-	if !ok {
-		return nil, types.ErrCantFindMetric
-	}
-	return metric, nil
+	return m.repository.GetMetric(ctx, metricName, metricType)
 }
 
-func (m *MetricsUseCase) GetAllMetricsByType(ctx context.Context, metricType string) []repository.Metric {
+func (m *MetricsUseCase) GetAllMetricsByType(ctx context.Context, metricType string) ([]repository.Metric, error) {
 	return m.repository.GetAllMetricsByType(ctx, metricType)
 }

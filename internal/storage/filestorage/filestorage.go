@@ -50,8 +50,15 @@ func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) 
 func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	gaugeMetrics := repo.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
-	counterMetrics := repo.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	gaugeMetrics, err := repo.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return err
+	}
+	counterMetrics, err := repo.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return err
+	}
+
 	outputMetrics := append(gaugeMetrics, counterMetrics...)
 	s.file.Seek(0, 0)
 	s.file.Truncate(0)

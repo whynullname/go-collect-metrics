@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 )
 
 type InMemoryRepo struct {
@@ -20,7 +21,7 @@ func NewInMemoryRepository() *InMemoryRepo {
 	}
 }
 
-func (i *InMemoryRepo) UpdateMetric(ctx context.Context, metric *repository.Metric) *repository.Metric {
+func (i *InMemoryRepo) UpdateMetric(ctx context.Context, metric *repository.Metric) (*repository.Metric, error) {
 	i.mx.Lock()
 	defer i.mx.Unlock()
 
@@ -38,18 +39,22 @@ func (i *InMemoryRepo) UpdateMetric(ctx context.Context, metric *repository.Metr
 		}
 	}
 
-	return metric
+	return metric, nil
 }
 
 func (i *InMemoryRepo) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	for _, metric := range metrics {
-		output = append(output, *i.UpdateMetric(ctx, &metric))
+		updatedMetric, err := i.UpdateMetric(ctx, &metric)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, *updatedMetric)
 	}
 	return output, nil
 }
 
-func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, bool) {
+func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 
@@ -57,27 +62,29 @@ func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricT
 		MType: metricType,
 		ID:    metricName,
 	}
-	isContains := false
+	var err error
 
 	switch metricType {
 	case repository.GaugeMetricKey:
 		metricValue, ok := i.gaugeMetrics[metricName]
 		if ok {
 			outputMetric.Value = &metricValue
+		} else {
+			err = types.ErrCantFindMetric
 		}
-		isContains = ok
 	case repository.CounterMetricKey:
 		metricValue, ok := i.counterMetrics[metricName]
 		if ok {
 			outputMetric.Delta = &metricValue
+		} else {
+			err = types.ErrCantFindMetric
 		}
-		isContains = ok
 	}
 
-	return &outputMetric, isContains
+	return &outputMetric, err
 }
 
-func (i *InMemoryRepo) GetAllMetricsByType(ctx context.Context, metricType string) []repository.Metric {
+func (i *InMemoryRepo) GetAllMetricsByType(ctx context.Context, metricType string) ([]repository.Metric, error) {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 	output := make([]repository.Metric, 0)
@@ -101,7 +108,7 @@ func (i *InMemoryRepo) GetAllMetricsByType(ctx context.Context, metricType strin
 		}
 	}
 
-	return output
+	return output, nil
 }
 
 func (i *InMemoryRepo) CloseRepository() {
