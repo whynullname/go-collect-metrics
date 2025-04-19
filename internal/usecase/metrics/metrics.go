@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"context"
+
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 )
@@ -15,7 +17,7 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 	}
 }
 
-func (m *MetricsUseCase) UpdateMetric(json *repository.Metric) (*repository.Metric, error) {
+func (m *MetricsUseCase) UpdateMetric(ctx context.Context, json *repository.Metric) (*repository.Metric, error) {
 	if json == nil || (json.Delta == nil && json.Value == nil) {
 		return nil, types.ErrMetricNilValue
 	}
@@ -24,14 +26,14 @@ func (m *MetricsUseCase) UpdateMetric(json *repository.Metric) (*repository.Metr
 		return nil, types.ErrUnsupportedMetricType
 	}
 
-	metric := m.repository.UpdateMetric(json)
+	metric := m.repository.UpdateMetric(ctx, json)
 	if metric == nil {
 		return nil, types.ErrWileUpdateMetric
 	}
 	return metric, nil
 }
 
-func (m *MetricsUseCase) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+func (m *MetricsUseCase) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
 	for _, metric := range metrics {
 		if metric.Delta == nil && metric.Value == nil {
 			return nil, types.ErrMetricNilValue
@@ -42,21 +44,21 @@ func (m *MetricsUseCase) UpdateMetrics(metrics []repository.Metric) ([]repositor
 		}
 	}
 
-	return m.repository.UpdateMetrics(metrics)
+	return m.repository.UpdateMetrics(ctx, metrics)
 }
 
-func (m *MetricsUseCase) GetMetric(metricType string, metricName string) (*repository.Metric, error) {
+func (m *MetricsUseCase) GetMetric(ctx context.Context, metricType string, metricName string) (*repository.Metric, error) {
 	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
 		return nil, types.ErrUnsupportedMetricType
 	}
 
-	metric, ok := m.repository.GetMetric(metricName, metricType)
+	metric, ok := m.repository.GetMetric(ctx, metricName, metricType)
 	if !ok {
 		return nil, types.ErrCantFindMetric
 	}
 	return metric, nil
 }
 
-func (m *MetricsUseCase) GetAllMetricsByType(metricType string) []repository.Metric {
-	return m.repository.GetAllMetricsByType(metricType)
+func (m *MetricsUseCase) GetAllMetricsByType(ctx context.Context, metricType string) []repository.Metric {
+	return m.repository.GetAllMetricsByType(ctx, metricType)
 }

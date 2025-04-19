@@ -1,15 +1,17 @@
 package repository
 
+import "context"
+
 const (
 	GaugeMetricKey   = "gauge"
 	CounterMetricKey = "counter"
 )
 
 type Repository interface {
-	UpdateMetric(metric *Metric) *Metric
-	UpdateMetrics(metrics []Metric) ([]Metric, error)
-	GetMetric(metricName string, metricType string) (*Metric, bool)
-	GetAllMetricsByType(metricType string) []Metric
+	UpdateMetric(ctx context.Context, metric *Metric) *Metric
+	UpdateMetrics(ctx context.Context, metrics []Metric) ([]Metric, error)
+	GetMetric(ctx context.Context, metricName string, metricType string) (*Metric, bool)
+	GetAllMetricsByType(ctx context.Context, metricType string) []Metric
 	PingRepo() bool
 	CloseRepository()
 }

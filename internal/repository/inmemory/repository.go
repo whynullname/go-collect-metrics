@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"context"
 	"sync"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
@@ -19,7 +20,7 @@ func NewInMemoryRepository() *InMemoryRepo {
 	}
 }
 
-func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metric {
+func (i *InMemoryRepo) UpdateMetric(ctx context.Context, metric *repository.Metric) *repository.Metric {
 	i.mx.Lock()
 	defer i.mx.Unlock()
 
@@ -40,15 +41,15 @@ func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metri
 	return metric
 }
 
-func (i *InMemoryRepo) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
+func (i *InMemoryRepo) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	for _, metric := range metrics {
-		output = append(output, *i.UpdateMetric(&metric))
+		output = append(output, *i.UpdateMetric(ctx, &metric))
 	}
 	return output, nil
 }
 
-func (i *InMemoryRepo) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
+func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, bool) {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 
@@ -76,7 +77,7 @@ func (i *InMemoryRepo) GetMetric(metricName string, metricType string) (*reposit
 	return &outputMetric, isContains
 }
 
-func (i *InMemoryRepo) GetAllMetricsByType(metricType string) []repository.Metric {
+func (i *InMemoryRepo) GetAllMetricsByType(ctx context.Context, metricType string) []repository.Metric {
 	i.mx.RLock()
 	defer i.mx.RUnlock()
 	output := make([]repository.Metric, 0)

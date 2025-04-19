@@ -2,6 +2,7 @@ package filestorage
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 	"sync"
@@ -49,8 +50,8 @@ func (s *FileStorage) RecordMetric(interval uint64, repo repository.Repository) 
 func (s *FileStorage) WriteMetrics(repo repository.Repository) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	gaugeMetrics := repo.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := repo.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics := repo.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	counterMetrics := repo.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
 	outputMetrics := append(gaugeMetrics, counterMetrics...)
 	s.file.Seek(0, 0)
 	s.file.Truncate(0)
@@ -68,7 +69,7 @@ func (s *FileStorage) ReadAllMetrics(repo repository.Repository) error {
 	}
 
 	for _, metric := range savedMetrics {
-		repo.UpdateMetric(&metric)
+		repo.UpdateMetric(context.TODO(), &metric)
 	}
 
 	return nil

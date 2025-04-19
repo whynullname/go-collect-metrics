@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
@@ -51,7 +52,7 @@ func TestUpdateGaugeMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, err := agInstance.metricsUseCase.GetMetric(test.data.MType, test.data.ID)
+			val, err := agInstance.metricsUseCase.GetMetric(context.TODO(), test.data.MType, test.data.ID)
 
 			if test.shouldDataExist {
 				assert.NoError(t, err)

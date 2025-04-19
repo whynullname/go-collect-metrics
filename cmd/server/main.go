@@ -30,7 +30,7 @@ func main() {
 	} else {
 		repo, err = postgres.NewPostgresRepo(cfg.PostgressAdress)
 		if err != nil {
-			logger.Log.Fatalln(err.Error())
+			logger.Log.Fatalln(err)
 			return
 		}
 	}
