@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -87,7 +88,7 @@ func (a *Agent) UpdateGaugeMetricValue(metricID string, value float64) {
 		Value: &value,
 		ID:    metricID,
 	}
-	a.metricsUseCase.UpdateMetric(&metric)
+	a.metricsUseCase.UpdateMetric(context.TODO(), &metric)
 }
 
 func (a *Agent) UpdateCounterMetricValue(metricID string, value int64) {
@@ -96,23 +97,36 @@ func (a *Agent) UpdateCounterMetricValue(metricID string, value int64) {
 		Delta: &value,
 		ID:    metricID,
 	}
-	a.metricsUseCase.UpdateMetric(&metric)
+	a.metricsUseCase.UpdateMetric(context.TODO(), &metric)
 }
 
 func (a *Agent) SendMetrics() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
 	jsonArray := append(counterMetrics, gaugeMetrics...)
 	a.sendPostResponseWithMetrics(jsonArray)
 }
 
 func (a *Agent) SendAllMetricsByArray() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
+
 	jsonArray := append(gaugeMetrics, counterMetrics...)
 	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
 	newRequest := a.Client.R().SetBody(jsonArray)
-	_, err := newRequest.Post(url)
+	_, err = newRequest.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
 	}
@@ -139,8 +153,15 @@ func (a *Agent) SendAllMetricByArrayAndSHA() {
 }
 
 func (a *Agent) SendMetricsByJSON() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		return
+	}
+
 	jsonArray := append(gaugeMetrics, counterMetrics...)
 	for _, metric := range jsonArray {
 		jsonBytes, err := json.Marshal(metric)

@@ -1,81 +1,116 @@
 package inmemory
 
 import (
+	"context"
 	"sync"
 
 	"github.com/whynullname/go-collect-metrics/internal/repository"
+	"github.com/whynullname/go-collect-metrics/internal/repository/types"
 )
 
 type InMemoryRepo struct {
-	mx      sync.RWMutex
-	metrics []repository.Metric
+	mx             sync.RWMutex
+	counterMetrics map[string]int64
+	gaugeMetrics   map[string]float64
 }
 
 func NewInMemoryRepository() *InMemoryRepo {
 	return &InMemoryRepo{
-		metrics: make([]repository.Metric, 0),
+		counterMetrics: make(map[string]int64, 0),
+		gaugeMetrics:   make(map[string]float64, 0),
 	}
 }
 
-func (i *InMemoryRepo) UpdateMetric(metric *repository.Metric) *repository.Metric {
-	i.mx.RLock()
-	defer i.mx.RUnlock()
-	for j, savedMetric := range i.metrics {
-		if savedMetric.ID == metric.ID {
-			switch metric.MType {
-			case repository.GaugeMetricKey:
-				savedMetric.Value = metric.Value
-				i.metrics[j] = savedMetric
-			case repository.CounterMetricKey:
-				sum := (*savedMetric.Delta) + (*metric.Delta)
-				savedMetric.Delta = &sum
-				i.metrics[j] = savedMetric
-			}
-			return &savedMetric
+func (i *InMemoryRepo) UpdateMetric(ctx context.Context, metric *repository.Metric) (*repository.Metric, error) {
+	i.mx.Lock()
+	defer i.mx.Unlock()
+
+	switch metric.MType {
+	case repository.GaugeMetricKey:
+		i.gaugeMetrics[metric.ID] = *metric.Value
+	case repository.CounterMetricKey:
+		metricValue, ok := i.counterMetrics[metric.ID]
+		if !ok {
+			i.counterMetrics[metric.ID] = *metric.Delta
+		} else {
+			sum := metricValue + (*metric.Delta)
+			i.counterMetrics[metric.ID] = sum
+			metric.Delta = &sum
 		}
 	}
 
-	i.metrics = append(i.metrics, *metric)
-	return metric
+	return metric, nil
 }
 
-func (i *InMemoryRepo) UpdateMetrics(metrics []repository.Metric) ([]repository.Metric, error) {
-	i.mx.RLock()
-	defer i.mx.RUnlock()
-
+func (i *InMemoryRepo) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
 	output := make([]repository.Metric, 0)
 	for _, metric := range metrics {
-		output = append(output, *i.UpdateMetric(&metric))
+		updatedMetric, err := i.UpdateMetric(ctx, &metric)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, *updatedMetric)
 	}
 	return output, nil
 }
 
-func (i *InMemoryRepo) GetMetric(metricName string, metricType string) (*repository.Metric, bool) {
-	i.mx.Lock()
-	defer i.mx.Unlock()
+func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
+	i.mx.RLock()
+	defer i.mx.RUnlock()
 
-	for _, savedMetric := range i.metrics {
-		if savedMetric.ID == metricName &&
-			savedMetric.MType == metricType {
-			return &savedMetric, true
+	outputMetric := repository.Metric{
+		MType: metricType,
+		ID:    metricName,
+	}
+	var err error
+
+	switch metricType {
+	case repository.GaugeMetricKey:
+		metricValue, ok := i.gaugeMetrics[metricName]
+		if ok {
+			outputMetric.Value = &metricValue
+		} else {
+			err = types.ErrCantFindMetric
 		}
+	case repository.CounterMetricKey:
+		metricValue, ok := i.counterMetrics[metricName]
+		if ok {
+			outputMetric.Delta = &metricValue
+		} else {
+			err = types.ErrCantFindMetric
+		}
+	default:
+		err = types.ErrUnsupportedMetricType
 	}
 
-	return nil, false
+	return &outputMetric, err
 }
 
-func (i *InMemoryRepo) GetAllMetricsByType(metricType string) []repository.Metric {
-	i.mx.Lock()
-	defer i.mx.Unlock()
+func (i *InMemoryRepo) GetAllMetricsByType(ctx context.Context, metricType string) ([]repository.Metric, error) {
+	i.mx.RLock()
+	defer i.mx.RUnlock()
 	output := make([]repository.Metric, 0)
 
-	for _, savedMetric := range i.metrics {
-		if savedMetric.MType == metricType {
-			output = append(output, savedMetric)
+	switch metricType {
+	case repository.GaugeMetricKey:
+		for name, value := range i.gaugeMetrics {
+			output = append(output, repository.Metric{
+				ID:    name,
+				MType: repository.GaugeMetricKey,
+				Value: &value,
+			})
+		}
+	case repository.CounterMetricKey:
+		for name, delta := range i.counterMetrics {
+			output = append(output, repository.Metric{
+				ID:    name,
+				MType: repository.CounterMetricKey,
+				Delta: &delta,
+			})
 		}
 	}
 
-	return output
+	return output, nil
 }
 
 func (i *InMemoryRepo) CloseRepository() {

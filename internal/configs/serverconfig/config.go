@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"strconv"
 
@@ -39,7 +38,7 @@ func (s *ServerConfig) registerFlags() {
 	flag.Uint64Var(&s.StoreInterval, "i", 300, "interval to save all metrics to file")
 	flag.StringVar(&s.FileStoragePath, "f", "metrics.json", "path to save metrics")
 	flag.BoolVar(&s.RestoreData, "r", true, "need load saved data in start")
-	flag.StringVar(&s.PostgressAdress, "d", fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", `localhost`, `videos`, `XXXXXXXX`, `videos`), "adress to connect postgres")
+	flag.StringVar(&s.PostgressAdress, "d", "", "adress to connect postgres")
 	flag.StringVar(&s.HashKey, "k", "", "key for sha hash")
 }
 

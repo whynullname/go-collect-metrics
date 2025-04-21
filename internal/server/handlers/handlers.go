@@ -62,8 +62,17 @@ func (h *Handlers) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gaugeMetrics := h.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := h.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics, err := h.metricsUseCase.GetAllMetricsByType(r.Context(), repository.GaugeMetricKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	counterMetrics, err := h.metricsUseCase.GetAllMetricsByType(r.Context(), repository.CounterMetricKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]any{
 		"Gauge":   gaugeMetrics,
 		"Counter": counterMetrics,
@@ -124,7 +133,18 @@ func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Log.Infof("Data received! Key %s, metricaName %s, metricValue %s \n", metricType, metricName, metricValue)
-	h.metricsUseCase.UpdateMetric(&metricObject)
+	_, err := h.metricsUseCase.UpdateMetric(r.Context(), &metricObject)
+	if err != nil {
+		logger.Log.Errorf("Error with update metrics: %w", err)
+		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -153,7 +173,7 @@ func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updatedMetric, err := h.metricsUseCase.UpdateMetric(&metricJSON)
+	updatedMetric, err := h.metricsUseCase.UpdateMetric(r.Context(), &metricJSON)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
 		if errors.Is(err, types.ErrMetricNilValue) || errors.Is(err, types.ErrUnsupportedMetricType) {
@@ -199,7 +219,7 @@ func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	outputMetrics, err := h.metricsUseCase.UpdateMetrics(metrics)
+	outputMetrics, err := h.metricsUseCase.UpdateMetrics(r.Context(), metrics)
 	if err != nil {
 		logger.Log.Errorf("Error with update metrics: %w", err)
 
@@ -227,7 +247,7 @@ func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
-	val, err := h.metricsUseCase.GetMetric(metricType, metricName)
+	val, err := h.metricsUseCase.GetMetric(r.Context(), metricType, metricName)
 	if err != nil {
 		if errors.Is(err, types.ErrCantFindMetric) {
 			w.WriteHeader(http.StatusNotFound)
@@ -271,12 +291,13 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ouputMetric, err := h.metricsUseCase.GetMetric(metricJSON.MType, metricJSON.ID)
+	ouputMetric, err := h.metricsUseCase.GetMetric(r.Context(), metricJSON.MType, metricJSON.ID)
 	if err != nil {
 		if errors.Is(err, types.ErrCantFindMetric) {
 			w.WriteHeader(http.StatusNotFound)
 		}
 		if errors.Is(err, types.ErrUnsupportedMetricType) {
+			logger.Log.Error(err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		return

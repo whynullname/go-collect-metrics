@@ -24,10 +24,15 @@ func main() {
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
-	postgressRepo := postgres.NewPostgresRepo(cfg.PostgressAdress)
-	var repo repository.Repository = postgressRepo
-	if postgressRepo == nil {
+	var repo repository.Repository
+	if cfg.PostgressAdress == "" {
 		repo = inmemory.NewInMemoryRepository()
+	} else {
+		repo, err = postgres.NewPostgresRepo(cfg.PostgressAdress)
+		if err != nil {
+			logger.Log.Fatalln(err)
+			return
+		}
 	}
 	defer repo.CloseRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
