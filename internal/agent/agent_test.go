@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
-func TestUpdateMetrics(t *testing.T) {
+func TestUpdateGaugeMetrics(t *testing.T) {
 	logger.Initialize("info")
 	memStats := runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
@@ -21,60 +22,37 @@ func TestUpdateMetrics(t *testing.T) {
 	metricsUseCase := metrics.NewMetricUseCase(repo)
 	agInstance := NewAgent(&memStats, metricsUseCase, cfg)
 	agInstance.UpdateMetrics()
+
+	alloc := float64(memStats.Alloc)
+	nexGC := float64(memStats.NextGC)
 	tests := []struct {
 		name            string
-		dataType        string
-		dataName        string
 		shouldDataExist bool
-		dataValue       any
+		data            repository.Metric
 	}{
 		{
 			name:            "Positive test data #1",
-			dataType:        repository.GaugeMetricKey,
-			dataName:        "Alloc",
 			shouldDataExist: true,
-			dataValue:       float64(memStats.Alloc),
+			data: repository.Metric{
+				MType: repository.GaugeMetricKey,
+				ID:    "Alloc",
+				Value: &alloc,
+			},
 		},
 		{
 			name:            "Positive test gauge data #2",
-			dataType:        repository.GaugeMetricKey,
-			dataName:        "NextGC",
 			shouldDataExist: true,
-			dataValue:       float64(memStats.NextGC),
-		},
-		{
-			name:            "Positiove test counter data #1",
-			dataType:        repository.CounterMetricKey,
-			dataName:        "PollCount",
-			shouldDataExist: true,
-			dataValue:       int64(1),
-		},
-		{
-			name:            "Try get non-existent counter data",
-			dataType:        repository.CounterMetricKey,
-			dataName:        "TestDataName",
-			shouldDataExist: false,
-			dataValue:       0,
-		},
-		{
-			name:            "Try get non-existent gauge data",
-			dataType:        repository.GaugeMetricKey,
-			dataName:        "TestDataName",
-			shouldDataExist: false,
-			dataValue:       0,
-		},
-		{
-			name:            "Try get non-existent data type",
-			dataType:        "testDataType",
-			dataName:        "TestDataName",
-			shouldDataExist: false,
-			dataValue:       0,
+			data: repository.Metric{
+				MType: repository.GaugeMetricKey,
+				ID:    "NextGC",
+				Value: &nexGC,
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, err := agInstance.metricsUseCase.TryGetMetricValue(test.dataType, test.dataName)
+			val, err := agInstance.metricsUseCase.GetMetric(context.TODO(), test.data.MType, test.data.ID)
 
 			if test.shouldDataExist {
 				assert.NoError(t, err)
@@ -83,7 +61,7 @@ func TestUpdateMetrics(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, test.dataValue, val)
+			assert.Equal(t, test.data.Value, val.Value)
 		})
 	}
 }

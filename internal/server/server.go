@@ -17,10 +17,10 @@ type Server struct {
 	Handlers *handlers.Handlers
 }
 
-func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConfig) *Server {
+func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConfig, pingRepoFunc func() bool) *Server {
 	serverInstance := &Server{
 		Config:   config,
-		Handlers: handlers.NewHandlers(metricsUseCase),
+		Handlers: handlers.NewHandlers(metricsUseCase, pingRepoFunc),
 	}
 	serverInstance.Router = serverInstance.createRouter()
 	return serverInstance
@@ -32,13 +32,17 @@ func (s *Server) createRouter() chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.Handlers.GetAllMetrics)
+		r.Get("/ping", s.Handlers.PingRepository)
 		r.Route("/value", func(r chi.Router) {
 			r.Post("/", s.Handlers.GetMetricByNameFromJSON)
 			r.Get("/{metricType}/{metricName}", s.Handlers.GetMetricByName)
 		})
 		r.Route("/update", func(r chi.Router) {
-			r.Post("/", s.Handlers.UpdateMetricForJSON)
-			r.Post("/{key}/{merticName}/{metricValue}", s.Handlers.UpdateMetric)
+			r.Post("/", s.Handlers.UpdateMetricFromJSON)
+			r.Post("/{metricType}/{merticName}/{metricValue}", s.Handlers.UpdateMetric)
+		})
+		r.Route("/updates", func(r chi.Router) {
+			r.Post("/", s.Handlers.UpdateArrayJSONMetrics)
 		})
 	})
 	return r
