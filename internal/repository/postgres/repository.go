@@ -46,7 +46,7 @@ func NewPostgresRepo(adress string) (*Postgres, error) {
 }
 
 func MigrateTable(db *sql.DB, tableName string, valueType string) error {
-	_, err := db.ExecContext(context.Background(), "CREATE TABLE IF NOT EXISTS "+tableName+
+	_, err := db.ExecContext(context.TODO(), "CREATE TABLE IF NOT EXISTS "+tableName+
 		"(metric_id varchar(150) NOT NULL, metric_value "+valueType+" NOT NULL)")
 	if err != nil {
 		logger.Log.Error(err)
@@ -222,25 +222,20 @@ func (p *Postgres) GetMetricWithTX(ctx context.Context, tx *sql.Tx, metricName s
 func (p *Postgres) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
 	switch metricType {
 	case repository.GaugeMetricKey:
-		return p.GetGaugeMetric(ctx, metricName, metricType)
+		return p.GetMetricQurey(ctx, metricName, metricType, GaugeMetricsTableName)
 	case repository.CounterMetricKey:
-		return p.GetCounterMetric(ctx, metricName, metricType)
+		return p.GetMetricQurey(ctx, metricName, metricType, CounterMetricsTableName)
 	}
 
-	return nil, types.ErrCantFindMetric
+	return nil, types.ErrUnsupportedMetricType
 }
 
-func (p *Postgres) GetGaugeMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
-	row := p.db.QueryRowContext(ctx, "SELECT metric_value FROM "+GaugeMetricsTableName+" WHERE metric_id = $1", metricName)
+func (p *Postgres) GetMetricQurey(ctx context.Context, metricName string, metricType string, metricTableName string) (*repository.Metric, error) {
+	row := p.db.QueryRowContext(ctx, "SELECT metric_value FROM "+metricTableName+" WHERE metric_id = $1", metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
-	output.ID = metricName
-	output.MType = metricType
-	return output, err
-}
-
-func (p *Postgres) GetCounterMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
-	row := p.db.QueryRowContext(ctx, "SELECT metric_value FROM "+CounterMetricsTableName+" WHERE metric_id = $1", metricName)
-	output, err := p.ScanMetricByMetricType(row, metricType)
+	if err != nil {
+		return nil, types.ErrCantFindMetric
+	}
 	output.ID = metricName
 	output.MType = metricType
 	return output, err

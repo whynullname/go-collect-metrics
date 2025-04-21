@@ -310,8 +310,8 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Write(resp)
 	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }
 
 func (h *Handlers) PingRepository(w http.ResponseWriter, r *http.Request) {

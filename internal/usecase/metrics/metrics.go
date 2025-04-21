@@ -44,10 +44,6 @@ func (m *MetricsUseCase) UpdateMetrics(ctx context.Context, metrics []repository
 }
 
 func (m *MetricsUseCase) GetMetric(ctx context.Context, metricType string, metricName string) (*repository.Metric, error) {
-	if metricType != repository.CounterMetricKey && metricType != repository.GaugeMetricKey {
-		return nil, types.ErrUnsupportedMetricType
-	}
-
 	return m.repository.GetMetric(ctx, metricName, metricType)
 }
 
