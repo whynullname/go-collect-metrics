@@ -3,10 +3,10 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -133,8 +133,16 @@ func (a *Agent) SendAllMetricsByArray() {
 }
 
 func (a *Agent) SendAllMetricByArrayAndSHA() {
-	gaugeMetrics := a.metricsUseCase.GetAllMetricsByType(repository.GaugeMetricKey)
-	counterMetrics := a.metricsUseCase.GetAllMetricsByType(repository.CounterMetricKey)
+	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+	if err != nil {
+		logger.Log.Error(err)
+		return
+	}
+	counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+	if err != nil {
+		logger.Log.Error(err)
+		return
+	}
 	jsonArray := append(gaugeMetrics, counterMetrics...)
 	url := fmt.Sprintf("http://%s/updates", a.Config.EndPointAdress)
 	hash := hmac.New(sha256.New, []byte(a.Config.HashKey))
