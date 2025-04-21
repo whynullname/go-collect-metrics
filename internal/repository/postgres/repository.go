@@ -220,26 +220,29 @@ func (p *Postgres) GetMetricWithTX(ctx context.Context, tx *sql.Tx, metricName s
 }
 
 func (p *Postgres) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
-	var reuqestStmt *sql.Stmt
 	switch metricType {
 	case repository.GaugeMetricKey:
-		stmt, err := p.db.PrepareContext(ctx, "SELECT metric_value FROM "+GaugeMetricsTableName+" WHERE metric_id = $1")
-		if err != nil {
-			return nil, err
-		}
-		reuqestStmt = stmt
+		return p.GetGaugeMetric(ctx, metricName, metricType)
 	case repository.CounterMetricKey:
-		stmt, err := p.db.PrepareContext(ctx, "SELECT metric_value FROM "+CounterMetricsTableName+" WHERE metric_id = $1")
-		if err != nil {
-			return nil, err
-		}
-		reuqestStmt = stmt
+		return p.GetCounterMetric(ctx, metricName, metricType)
 	}
-	row := reuqestStmt.QueryRowContext(ctx, metricName)
+
+	return nil, types.ErrCantFindMetric
+}
+
+func (p *Postgres) GetGaugeMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
+	row := p.db.QueryRowContext(ctx, "SELECT metric_value FROM "+GaugeMetricsTableName+" WHERE metric_id = $1", metricName)
 	output, err := p.ScanMetricByMetricType(row, metricType)
 	output.ID = metricName
 	output.MType = metricType
-	reuqestStmt.Close()
+	return output, err
+}
+
+func (p *Postgres) GetCounterMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
+	row := p.db.QueryRowContext(ctx, "SELECT metric_value FROM "+CounterMetricsTableName+" WHERE metric_id = $1", metricName)
+	output, err := p.ScanMetricByMetricType(row, metricType)
+	output.ID = metricName
+	output.MType = metricType
 	return output, err
 }
 

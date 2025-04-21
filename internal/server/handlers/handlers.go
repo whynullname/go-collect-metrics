@@ -297,6 +297,7 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 			w.WriteHeader(http.StatusNotFound)
 		}
 		if errors.Is(err, types.ErrUnsupportedMetricType) {
+			logger.Log.Error(err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		return
@@ -309,8 +310,8 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handlers) PingRepository(w http.ResponseWriter, r *http.Request) {
