@@ -62,7 +62,7 @@ func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricT
 		MType: metricType,
 		ID:    metricName,
 	}
-	var err error = types.ErrUnsupportedMetricType
+	var err error
 
 	switch metricType {
 	case repository.GaugeMetricKey:
@@ -79,6 +79,8 @@ func (i *InMemoryRepo) GetMetric(ctx context.Context, metricName string, metricT
 		} else {
 			err = types.ErrCantFindMetric
 		}
+	default:
+		err = types.ErrUnsupportedMetricType
 	}
 
 	return &outputMetric, err
