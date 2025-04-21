@@ -18,23 +18,18 @@ type Postgres struct {
 	db *sql.DB
 }
 
-const (
-	GaugeMetricsTableName   = "gauge_metrics"
-	CounterMetricsTableName = "counter_metrics"
-)
-
 func NewPostgresRepo(adress string) (*Postgres, error) {
 	db, err := sql.Open("pgx", adress)
 	if err != nil {
 		return nil, err
 	}
 
-	err = MigrateTable(db, GaugeMetricsTableName, "double precision")
+	err = MigrateTable(db, "gauge_metrics", "double precision")
 	if err != nil {
 		return nil, err
 	}
 
-	err = MigrateTable(db, CounterMetricsTableName, "BIGINT")
+	err = MigrateTable(db, "counter_metrics", "BIGINT")
 	if err != nil {
 		return nil, err
 	}
@@ -132,14 +127,14 @@ func (p *Postgres) UpdateWithRetries(ctx context.Context, metrics []repository.M
 }
 
 func (p *Postgres) UpdateGaugeMetric(ctx context.Context, metric *repository.Metric) (*repository.Metric, error) {
-	res, err := p.db.ExecContext(ctx, "UPDATE "+GaugeMetricsTableName+` 
+	res, err := p.db.ExecContext(ctx, `UPDATE gauge_metrics
 	SET metric_value = $1 WHERE metric_id = $2`, metric.Value, metric.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if rows, _ := res.RowsAffected(); rows == 0 {
-		_, err = p.db.ExecContext(ctx, "INSERT INTO "+GaugeMetricsTableName+` 
+		_, err = p.db.ExecContext(ctx, `INSERT INTO gauge_metrics 
 		(metric_id, metric_value) 
 		VALUES ($1, $2)`, metric.ID, metric.Value)
 		if err != nil {
@@ -151,14 +146,14 @@ func (p *Postgres) UpdateGaugeMetric(ctx context.Context, metric *repository.Met
 }
 
 func (p *Postgres) UpdateGaugeMetricWithTx(ctx context.Context, tx *sql.Tx, metric *repository.Metric) (*repository.Metric, error) {
-	res, err := tx.ExecContext(ctx, "UPDATE "+GaugeMetricsTableName+` 
+	res, err := tx.ExecContext(ctx, `UPDATE gauge_metrics 
 	SET metric_value = $1 WHERE metric_id = $2`, metric.Value, metric.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if rows, _ := res.RowsAffected(); rows == 0 {
-		_, err = tx.ExecContext(ctx, "INSERT INTO "+GaugeMetricsTableName+` 
+		_, err = tx.ExecContext(ctx, `INSERT INTO gauge_metrics 
 		(metric_id, metric_value) 
 		VALUES ($1, $2)`, metric.ID, metric.Value)
 		if err != nil {
@@ -174,14 +169,14 @@ func (p *Postgres) UpdateCounterMetricValue(ctx context.Context, metric *reposit
 
 	if err != nil {
 		val = metric
-		_, err := p.db.ExecContext(ctx, "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", val.ID, *val.Delta)
+		_, err := p.db.ExecContext(ctx, "INSERT INTO counter_metrics (metric_id, metric_value) VALUES ($1, $2)", val.ID, *val.Delta)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		newDelta := (*metric.Delta) + (*val.Delta)
+		newDelta := metric.GetDelta() + val.GetDelta()
 		val.Delta = &newDelta
-		_, err := p.db.ExecContext(ctx, "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", *val.Delta, val.ID)
+		_, err := p.db.ExecContext(ctx, "UPDATE counter_metrics SET metric_value = $1 WHERE metric_id = $2", *val.Delta, val.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -191,18 +186,18 @@ func (p *Postgres) UpdateCounterMetricValue(ctx context.Context, metric *reposit
 }
 
 func (p *Postgres) UpdateCounterMetricValueWithTx(ctx context.Context, tx *sql.Tx, metric *repository.Metric) (*repository.Metric, error) {
-	val, err := p.GetMetricWithTX(ctx, tx, metric.ID, metric.MType, CounterMetricsTableName)
+	val, err := p.GetMetricWithTX(ctx, tx, metric.ID, metric.MType, "counter_metrics")
 
 	if err != nil {
 		val = metric
-		_, err := tx.ExecContext(ctx, "INSERT INTO "+CounterMetricsTableName+" (metric_id, metric_value) VALUES ($1, $2)", val.ID, val.Delta)
+		_, err := tx.ExecContext(ctx, "INSERT INTO counter_metrics (metric_id, metric_value) VALUES ($1, $2)", val.ID, val.Delta)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		newDelta := (*metric.Delta) + (*val.Delta)
+		newDelta := metric.GetDelta() + val.GetDelta()
 		val.Delta = &newDelta
-		_, err := tx.ExecContext(ctx, "UPDATE "+CounterMetricsTableName+" SET metric_value = $1 WHERE metric_id = $2", val.Delta, val.ID)
+		_, err := tx.ExecContext(ctx, "UPDATE counter_metrics SET metric_value = $1 WHERE metric_id = $2", val.Delta, val.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -222,9 +217,9 @@ func (p *Postgres) GetMetricWithTX(ctx context.Context, tx *sql.Tx, metricName s
 func (p *Postgres) GetMetric(ctx context.Context, metricName string, metricType string) (*repository.Metric, error) {
 	switch metricType {
 	case repository.GaugeMetricKey:
-		return p.GetMetricQurey(ctx, metricName, metricType, GaugeMetricsTableName)
+		return p.GetMetricQurey(ctx, metricName, metricType, "gauge_metrics")
 	case repository.CounterMetricKey:
-		return p.GetMetricQurey(ctx, metricName, metricType, CounterMetricsTableName)
+		return p.GetMetricQurey(ctx, metricName, metricType, "counter_metrics")
 	}
 
 	return nil, types.ErrUnsupportedMetricType
@@ -246,9 +241,9 @@ func (p *Postgres) GetAllMetricsByType(ctx context.Context, metricType string) (
 	tableName := ""
 	switch metricType {
 	case repository.CounterMetricKey:
-		tableName = CounterMetricsTableName
+		tableName = "counter_metrics"
 	case repository.GaugeMetricKey:
-		tableName = GaugeMetricsTableName
+		tableName = "gauge_metrics"
 	}
 	rows, err := p.db.QueryContext(ctx, "SELECT * FROM "+tableName)
 	if err != nil {

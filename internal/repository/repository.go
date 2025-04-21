@@ -22,3 +22,17 @@ type Metric struct {
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
+
+func (m *Metric) GetValue() float64 {
+	if m == nil || m.Value == nil {
+		return 0
+	}
+	return *m.Value
+}
+
+func (m *Metric) GetDelta() int64 {
+	if m == nil || m.Delta == nil {
+		return 0
+	}
+	return *m.Delta
+}
