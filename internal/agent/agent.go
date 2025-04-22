@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/shirou/gopsutil/v4/mem"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
@@ -47,39 +48,91 @@ func NewAgent(memStats *runtime.MemStats, metricUseCase *metrics.MetricsUseCase,
 	}
 }
 
-func (a *Agent) UpdateMetrics() {
-	memStats := a.memStats
-	runtime.ReadMemStats(memStats)
-	a.UpdateGaugeMetricValue("Alloc", float64(memStats.Alloc))
-	a.UpdateGaugeMetricValue("Frees", float64(memStats.Frees))
-	a.UpdateGaugeMetricValue("BuckHashSys", float64(memStats.BuckHashSys))
-	a.UpdateGaugeMetricValue("GCCPUFraction", float64(memStats.GCCPUFraction))
-	a.UpdateGaugeMetricValue("GCSys", float64(memStats.GCSys))
-	a.UpdateGaugeMetricValue("HeapAlloc", float64(memStats.HeapAlloc))
-	a.UpdateGaugeMetricValue("HeapIdle", float64(memStats.HeapIdle))
-	a.UpdateGaugeMetricValue("HeapInuse", float64(memStats.HeapInuse))
-	a.UpdateGaugeMetricValue("HeapObjects", float64(memStats.HeapObjects))
-	a.UpdateGaugeMetricValue("HeapReleased", float64(memStats.HeapReleased))
-	a.UpdateGaugeMetricValue("HeapSys", float64(memStats.HeapSys))
-	a.UpdateGaugeMetricValue("LastGC", float64(memStats.LastGC))
-	a.UpdateGaugeMetricValue("Lookups", float64(memStats.Lookups))
-	a.UpdateGaugeMetricValue("MCacheSys", float64(memStats.MCacheSys))
-	a.UpdateGaugeMetricValue("Mallocs", float64(memStats.Mallocs))
-	a.UpdateGaugeMetricValue("NextGC", float64(memStats.NextGC))
-	a.UpdateGaugeMetricValue("NumForcedGC", float64(memStats.NumForcedGC))
-	a.UpdateGaugeMetricValue("NumGC", float64(memStats.NumGC))
-	a.UpdateGaugeMetricValue("OtherSys", float64(memStats.OtherSys))
-	a.UpdateGaugeMetricValue("PauseTotalNs", float64(memStats.PauseTotalNs))
-	a.UpdateGaugeMetricValue("StackInuse", float64(memStats.StackInuse))
-	a.UpdateGaugeMetricValue("StackSys", float64(memStats.StackSys))
-	a.UpdateGaugeMetricValue("Sys", float64(memStats.Sys))
-	a.UpdateGaugeMetricValue("TotalAlloc", float64(memStats.TotalAlloc))
-	a.UpdateGaugeMetricValue("MCacheInuse", float64(memStats.MCacheInuse))
-	a.UpdateGaugeMetricValue("MSpanInuse", float64(memStats.MSpanInuse))
-	a.UpdateGaugeMetricValue("MSpanSys", float64(memStats.MSpanSys))
-	a.UpdateGaugeMetricValue("RandomValue", rand.Float64())
+func (a *Agent) worker(metricsToSend <-chan *repository.Metric) {
+	for metric := range metricsToSend {
+		jsonBytes, err := json.Marshal(metric)
+		if err != nil {
+			logger.Log.Infof("error %s", err.Error())
+			continue
+		}
+		logger.Log.Infof("Send metric %s\n", metric.ID)
+		a.sendJSONWithEncoding(jsonBytes)
+	}
+}
 
-	a.UpdateCounterMetricValue("PollCount", int64(1))
+func (a *Agent) UpdateMetrics() {
+	updateDuration := time.Duration(a.Config.PollInterval) * time.Second
+	for {
+		ticker := time.NewTicker(updateDuration)
+		<-ticker.C
+		ticker.Stop()
+
+		logger.Log.Info("Update metrics")
+		memStats := a.memStats
+		runtime.ReadMemStats(memStats)
+		a.UpdateGaugeMetricValue("Alloc", float64(memStats.Alloc))
+		a.UpdateGaugeMetricValue("Frees", float64(memStats.Frees))
+		a.UpdateGaugeMetricValue("BuckHashSys", float64(memStats.BuckHashSys))
+		a.UpdateGaugeMetricValue("GCCPUFraction", float64(memStats.GCCPUFraction))
+		a.UpdateGaugeMetricValue("GCSys", float64(memStats.GCSys))
+		a.UpdateGaugeMetricValue("HeapAlloc", float64(memStats.HeapAlloc))
+		a.UpdateGaugeMetricValue("HeapIdle", float64(memStats.HeapIdle))
+		a.UpdateGaugeMetricValue("HeapInuse", float64(memStats.HeapInuse))
+		a.UpdateGaugeMetricValue("HeapObjects", float64(memStats.HeapObjects))
+		a.UpdateGaugeMetricValue("HeapReleased", float64(memStats.HeapReleased))
+		a.UpdateGaugeMetricValue("HeapSys", float64(memStats.HeapSys))
+		a.UpdateGaugeMetricValue("LastGC", float64(memStats.LastGC))
+		a.UpdateGaugeMetricValue("Lookups", float64(memStats.Lookups))
+		a.UpdateGaugeMetricValue("MCacheSys", float64(memStats.MCacheSys))
+		a.UpdateGaugeMetricValue("Mallocs", float64(memStats.Mallocs))
+		a.UpdateGaugeMetricValue("NextGC", float64(memStats.NextGC))
+		a.UpdateGaugeMetricValue("NumForcedGC", float64(memStats.NumForcedGC))
+		a.UpdateGaugeMetricValue("NumGC", float64(memStats.NumGC))
+		a.UpdateGaugeMetricValue("OtherSys", float64(memStats.OtherSys))
+		a.UpdateGaugeMetricValue("PauseTotalNs", float64(memStats.PauseTotalNs))
+		a.UpdateGaugeMetricValue("StackInuse", float64(memStats.StackInuse))
+		a.UpdateGaugeMetricValue("StackSys", float64(memStats.StackSys))
+		a.UpdateGaugeMetricValue("Sys", float64(memStats.Sys))
+		a.UpdateGaugeMetricValue("TotalAlloc", float64(memStats.TotalAlloc))
+		a.UpdateGaugeMetricValue("MCacheInuse", float64(memStats.MCacheInuse))
+		a.UpdateGaugeMetricValue("MSpanInuse", float64(memStats.MSpanInuse))
+		a.UpdateGaugeMetricValue("MSpanSys", float64(memStats.MSpanSys))
+		a.UpdateGaugeMetricValue("RandomValue", rand.Float64())
+
+		v, _ := mem.VirtualMemory()
+		a.UpdateGaugeMetricValue("TotalMemory", float64(v.Total))
+		a.UpdateGaugeMetricValue("FreeMemory", float64(v.Free))
+		a.UpdateGaugeMetricValue("CPUutilization1", v.UsedPercent)
+
+		a.UpdateCounterMetricValue("PollCount", int64(1))
+	}
+}
+
+func (a *Agent) SendActualMetrics() {
+	updateDuration := time.Duration(a.Config.ReportInterval) * time.Second
+	jobs := make(chan *repository.Metric, 18)
+	for i := 0; i < a.Config.RateLimit; i++ {
+		go a.worker(jobs)
+	}
+	for {
+		ticker := time.NewTicker(updateDuration)
+		<-ticker.C
+		ticker.Stop()
+
+		gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
+		if err != nil {
+			return
+		}
+		counterMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.CounterMetricKey)
+		if err != nil {
+			return
+		}
+
+		metricsArray := append(gaugeMetrics, counterMetrics...)
+		for _, json := range metricsArray {
+			jobs <- &json
+		}
+	}
 }
 
 func (a *Agent) UpdateGaugeMetricValue(metricID string, value float64) {

@@ -11,6 +11,7 @@ type AgentConfig struct {
 	ReportInterval int
 	PollInterval   int
 	HashKey        string
+	RateLimit      int
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -36,6 +37,7 @@ func (a *AgentConfig) registerFlags() {
 	flag.IntVar(&a.ReportInterval, "r", 10, "frequency of sending metrics to the server")
 	flag.IntVar(&a.PollInterval, "p", 2, "frequency of polling metrics from the runtime package")
 	flag.StringVar(&a.HashKey, "k", "", "key for sha hash")
+	flag.IntVar(&a.RateLimit, "l", 1, "rate limit goroutines to send metrics")
 }
 
 func (a *AgentConfig) checkEnv() {
@@ -61,5 +63,13 @@ func (a *AgentConfig) checkEnv() {
 
 	if hashKey := os.Getenv("KEY"); hashKey != "" {
 		a.HashKey = hashKey
+	}
+
+	if rateLimit := os.Getenv("RATE_LIMIT"); rateLimit != "" {
+		i, err := strconv.ParseInt(rateLimit, 10, 32)
+
+		if err != nil {
+			a.PollInterval = int(i)
+		}
 	}
 }
