@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v3/mem"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
@@ -98,13 +98,17 @@ func (a *Agent) UpdateMetrics() {
 		a.UpdateGaugeMetricValue("MSpanInuse", float64(memStats.MSpanInuse))
 		a.UpdateGaugeMetricValue("MSpanSys", float64(memStats.MSpanSys))
 		a.UpdateGaugeMetricValue("RandomValue", rand.Float64())
+		a.UpdateCounterMetricValue("PollCount", int64(1))
 
-		v, _ := mem.VirtualMemory()
+		v, err := mem.VirtualMemory()
+		if err != nil {
+			logger.Log.Error(err)
+			continue
+		}
+
 		a.UpdateGaugeMetricValue("TotalMemory", float64(v.Total))
 		a.UpdateGaugeMetricValue("FreeMemory", float64(v.Free))
 		a.UpdateGaugeMetricValue("CPUutilization1", v.UsedPercent)
-
-		a.UpdateCounterMetricValue("PollCount", int64(1))
 	}
 }
 
