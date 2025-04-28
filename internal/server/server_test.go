@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"strconv"
 	"testing"
 
@@ -101,16 +100,15 @@ func TestUpdateData(t *testing.T) {
 
 func TestGetData(t *testing.T) {
 	logger.Initialize("info")
-	memStats := runtime.MemStats{}
 	repo := inmemory.NewInMemoryRepository()
 	agentCfg := configAgent.NewAgentConfig()
 	serverCfg := configServer.NewServerConfig()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	agent := agent.NewAgent(&memStats, metricsUseCase, agentCfg)
+	agent := agent.NewAgent(metricsUseCase, agentCfg)
 	serv := NewServer(metricsUseCase, serverCfg, repo.PingRepo)
 	client := httptest.NewServer(serv.Router)
 	defer client.Close()
-	agent.UpdateMetrics()
+	agent.Collector.CollectMetrics()
 
 	tests := []struct {
 		name       string
@@ -124,14 +122,14 @@ func TestGetData(t *testing.T) {
 			method:     http.MethodGet,
 			url:        "/value/gauge/Alloc",
 			headerCode: http.StatusOK,
-			response:   strconv.FormatUint(memStats.Alloc, 10),
+			response:   strconv.FormatUint(agent.Collector.MemStats.Alloc, 10),
 		},
 		{
 			name:       "positive test #2",
 			method:     http.MethodGet,
 			url:        "/value/gauge/NextGC",
 			headerCode: http.StatusOK,
-			response:   strconv.FormatUint(memStats.NextGC, 10),
+			response:   strconv.FormatUint(agent.Collector.MemStats.NextGC, 10),
 		},
 		{
 			name:       "bad http method",

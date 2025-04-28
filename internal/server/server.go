@@ -50,10 +50,9 @@ func (s *Server) createRouter() chi.Router {
 }
 
 func (s *Server) registerMiddlewares(r chi.Router) {
-	shamiddleware.Cfg = s.Config
 	r.Use(middlewares.Logging)
 	r.Use(compressmiddleware.GZIP)
-	r.Use(shamiddleware.HashSHA256)
+	r.Use(shamiddleware.HashSHA256(s.Config))
 }
 
 func (s *Server) ListenAndServe() error {

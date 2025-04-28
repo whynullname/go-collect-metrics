@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
-	"runtime"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/whynullname/go-collect-metrics/internal/agent"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
@@ -14,7 +16,6 @@ import (
 
 func main() {
 	err := logger.Initialize("info")
-
 	if err != nil {
 		log.Fatalf("Fatal initialize logger")
 		return
@@ -22,16 +23,16 @@ func main() {
 
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
-
-	memStats := runtime.MemStats{}
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
+	instance := agent.NewAgent(metricsUseCase, cfg)
 
-	instance := agent.NewAgent(&memStats, metricsUseCase, cfg)
 	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go instance.UpdateMetrics()
-	go instance.SendActualMetrics()
-	wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+	go instance.UpdateMetrics(ctx)
+	go instance.SendActualMetrics(ctx)
+	<-exit
+	cancel()
 }

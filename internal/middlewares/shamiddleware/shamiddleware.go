@@ -14,9 +14,13 @@ import (
 
 const headerKey = "HashSHA256"
 
-var Cfg *config.ServerConfig
+func HashSHA256(cfg *config.ServerConfig) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return hashSHA256Middleware(next, cfg)
+	}
+}
 
-func HashSHA256(next http.Handler) http.Handler {
+func hashSHA256Middleware(next http.Handler, cfg *config.ServerConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headerHash := r.Header.Get(headerKey)
 		if headerHash == "" {
@@ -36,7 +40,7 @@ func HashSHA256(next http.Handler) http.Handler {
 		}
 
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		encodedBody := hmac.New(sha256.New, []byte(Cfg.HashKey))
+		encodedBody := hmac.New(sha256.New, []byte(cfg.HashKey))
 		encodedBody.Write(bodyBytes)
 		next.ServeHTTP(w, r)
 		if !hmac.Equal(decodedHash, encodedBody.Sum(nil)) {
