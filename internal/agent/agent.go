@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/whynullname/go-collect-metrics/internal/agent/collector"
@@ -30,10 +31,13 @@ func NewAgent(metricUseCase *metrics.MetricsUseCase, config *config.AgentConfig)
 	}
 }
 
-func (a *Agent) UpdateMetrics(ctx context.Context) {
+func (a *Agent) UpdateMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	updateDuration := time.Duration(a.config.PollInterval) * time.Second
 	ticker := time.NewTicker(updateDuration)
-	defer ticker.Stop()
+	defer func() {
+		ticker.Stop()
+		wg.Done()
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -45,15 +49,18 @@ func (a *Agent) UpdateMetrics(ctx context.Context) {
 	}
 }
 
-func (a *Agent) SendActualMetrics(ctx context.Context) {
+func (a *Agent) SendActualMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	updateDuration := time.Duration(a.config.ReportInterval) * time.Second
 	ticker := time.NewTicker(updateDuration)
-	defer ticker.Stop()
+	defer func() {
+		ticker.Stop()
+		wg.Done()
+	}()
 
 	workerCtx, cancelWorkers := context.WithCancel(context.Background())
 	jobs := make(chan *repository.Metric, 18)
 	for i := 0; i < a.config.RateLimit; i++ {
-		go a.worker(jobs, workerCtx)
+		go a.worker(workerCtx, jobs)
 	}
 	for {
 		select {
@@ -68,18 +75,27 @@ func (a *Agent) SendActualMetrics(ctx context.Context) {
 			}
 
 			for _, json := range metricsArray {
-				jobs <- &json
+				select {
+				case jobs <- &json:
+					// успешно отправлено
+				default:
+					logger.Log.Warnf("jobs channel is full, dropping metric %s\n", json.ID)
+				}
 			}
 		}
 	}
 }
 
-func (a *Agent) worker(metricsToSend <-chan *repository.Metric, ctx context.Context) {
+func (a *Agent) worker(ctx context.Context, metricsToSend <-chan *repository.Metric) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case metric := <-metricsToSend:
+		case metric, ok := <-metricsToSend:
+			if !ok {
+				return
+			}
+
 			jsonBytes, err := json.Marshal(metric)
 			if err != nil {
 				logger.Log.Infof("error %s", err.Error())

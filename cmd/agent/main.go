@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/whynullname/go-collect-metrics/internal/agent"
@@ -31,8 +32,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
-	go instance.UpdateMetrics(ctx)
-	go instance.SendActualMetrics(ctx)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go instance.UpdateMetrics(ctx, &wg)
+	go instance.SendActualMetrics(ctx, &wg)
 	<-exit
 	cancel()
+	wg.Wait()
 }
