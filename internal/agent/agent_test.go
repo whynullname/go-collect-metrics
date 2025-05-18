@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,16 +14,14 @@ import (
 
 func TestUpdateGaugeMetrics(t *testing.T) {
 	logger.Initialize("info")
-	memStats := runtime.MemStats{}
-	runtime.ReadMemStats(&memStats)
 	repo := inmemory.NewInMemoryRepository()
 	cfg := config.NewAgentConfig()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	agInstance := NewAgent(&memStats, metricsUseCase, cfg)
-	agInstance.UpdateMetrics()
+	agInstance := NewAgent(metricsUseCase, cfg)
+	agInstance.Collector.CollectMetrics()
 
-	alloc := float64(memStats.Alloc)
-	nexGC := float64(memStats.NextGC)
+	alloc := float64(agInstance.Collector.MemStats.Alloc)
+	nexGC := float64(agInstance.Collector.MemStats.NextGC)
 	tests := []struct {
 		name            string
 		shouldDataExist bool
@@ -52,7 +49,7 @@ func TestUpdateGaugeMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			val, err := agInstance.metricsUseCase.GetMetric(context.TODO(), test.data.MType, test.data.ID)
+			val, err := metricsUseCase.GetMetric(context.TODO(), test.data.MType, test.data.ID)
 
 			if test.shouldDataExist {
 				assert.NoError(t, err)

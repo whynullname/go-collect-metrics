@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
-	"runtime"
-	"time"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/whynullname/go-collect-metrics/internal/agent"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
@@ -14,7 +17,6 @@ import (
 
 func main() {
 	err := logger.Initialize("info")
-
 	if err != nil {
 		log.Fatalf("Fatal initialize logger")
 		return
@@ -22,30 +24,19 @@ func main() {
 
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
-
-	memStats := runtime.MemStats{}
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
+	instance := agent.NewAgent(metricsUseCase, cfg)
 
-	instance := agent.NewAgent(&memStats, metricsUseCase, cfg)
 	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
-	updateAndSendMetrics(instance)
-}
-
-func updateAndSendMetrics(instance *agent.Agent) {
-	secondPassed := time.Duration(0)
-
-	for {
-		logger.Log.Info("Update metrics")
-		instance.UpdateMetrics()
-		sleepDuration := time.Duration(instance.Config.PollInterval) * time.Second
-		time.Sleep(sleepDuration)
-		secondPassed += sleepDuration
-
-		if secondPassed >= time.Duration(instance.Config.ReportInterval)*time.Second {
-			secondPassed = time.Duration(0)
-			logger.Log.Info("Send metrics")
-			instance.SendAllMetricsByArray()
-		}
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go instance.UpdateMetrics(ctx, &wg)
+	go instance.SendActualMetrics(ctx, &wg)
+	<-exit
+	cancel()
+	wg.Wait()
 }
