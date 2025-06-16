@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
@@ -30,7 +31,7 @@ func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConf
 func (s *Server) createRouter() chi.Router {
 	r := chi.NewRouter()
 	s.registerMiddlewares(r)
-
+	r.Mount("/debug", pprofRouter())
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", s.Handlers.GetAllMetrics)
 		r.Get("/ping", s.Handlers.PingRepository)
@@ -57,4 +58,16 @@ func (s *Server) registerMiddlewares(r chi.Router) {
 
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.Config.EndPointAdress, s.Router)
+}
+
+func pprofRouter() http.Handler {
+	r := chi.NewRouter()
+	r.Get("/pprof/", http.HandlerFunc(pprof.Index))
+	r.Get("/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	r.Get("/pprof/profile", http.HandlerFunc(pprof.Profile))
+	r.Get("/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	r.Post("/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	r.Get("/pprof/trace", http.HandlerFunc(pprof.Trace))
+	r.Get("/pprof/{name}", http.HandlerFunc(pprof.Index))
+	return r
 }
