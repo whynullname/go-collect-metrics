@@ -1,3 +1,4 @@
+// Пакет agent предоставляет основную логику агента.
 package agent
 
 import (
@@ -31,6 +32,7 @@ func NewAgent(metricUseCase *metrics.MetricsUseCase, config *config.AgentConfig)
 	}
 }
 
+// UpdateMetrics горутина которая каждые config.PollInterval обновляет метрики в репозитории.
 func (a *Agent) UpdateMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	updateDuration := time.Duration(a.config.PollInterval) * time.Second
 	ticker := time.NewTicker(updateDuration)
@@ -49,6 +51,7 @@ func (a *Agent) UpdateMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+// SendActualMetrics горутина которая каждые config.ReportInterval отправляет метрики на сервер.
 func (a *Agent) SendActualMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	updateDuration := time.Duration(a.config.ReportInterval) * time.Second
 	ticker := time.NewTicker(updateDuration)
