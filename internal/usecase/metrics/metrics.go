@@ -1,3 +1,4 @@
+// Пакет metrics содержит usecase структуру, которая обеспечивает слой между хенделрами и репозиторием.
 package metrics
 
 import (
@@ -17,6 +18,7 @@ func NewMetricUseCase(repository repository.Repository) *MetricsUseCase {
 	}
 }
 
+// UpdateMetric обновить метрику в репозитории.
 func (m *MetricsUseCase) UpdateMetric(ctx context.Context, json *repository.Metric) (*repository.Metric, error) {
 	if json == nil || (json.Delta == nil && json.Value == nil) {
 		return nil, types.ErrMetricNilValue
@@ -29,6 +31,7 @@ func (m *MetricsUseCase) UpdateMetric(ctx context.Context, json *repository.Metr
 	return m.repository.UpdateMetric(ctx, json)
 }
 
+// UpdateMetrics обновить массив метрик в репозитории.
 func (m *MetricsUseCase) UpdateMetrics(ctx context.Context, metrics []repository.Metric) ([]repository.Metric, error) {
 	for _, metric := range metrics {
 		if metric.Delta == nil && metric.Value == nil {
@@ -43,10 +46,12 @@ func (m *MetricsUseCase) UpdateMetrics(ctx context.Context, metrics []repository
 	return m.repository.UpdateMetrics(ctx, metrics)
 }
 
+// GetMetric получить метрику по типу и имени.
 func (m *MetricsUseCase) GetMetric(ctx context.Context, metricType string, metricName string) (*repository.Metric, error) {
 	return m.repository.GetMetric(ctx, metricName, metricType)
 }
 
+// GetAllMetricsByType получить слайс метрик по типу.
 func (m *MetricsUseCase) GetAllMetricsByType(ctx context.Context, metricType string) ([]repository.Metric, error) {
 	return m.repository.GetAllMetricsByType(ctx, metricType)
 }

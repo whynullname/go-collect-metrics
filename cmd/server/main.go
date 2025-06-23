@@ -12,6 +12,8 @@ import (
 	"github.com/whynullname/go-collect-metrics/internal/storage/filestorage"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 
+	_ "net/http/pprof"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 

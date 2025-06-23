@@ -1,3 +1,4 @@
+// Пакет repository описывает основные методы и структуры, которые нужны для репозитория.
 package repository
 
 import "context"
@@ -8,14 +9,15 @@ const (
 )
 
 type Repository interface {
-	UpdateMetric(ctx context.Context, metric *Metric) (*Metric, error)
-	UpdateMetrics(ctx context.Context, metrics []Metric) ([]Metric, error)
-	GetMetric(ctx context.Context, metricName string, metricType string) (*Metric, error)
-	GetAllMetricsByType(ctx context.Context, metricType string) ([]Metric, error)
-	PingRepo() bool
-	CloseRepository()
+	UpdateMetric(ctx context.Context, metric *Metric) (*Metric, error)                    // обнолвение метрики.
+	UpdateMetrics(ctx context.Context, metrics []Metric) ([]Metric, error)                // обновление массива метрик.
+	GetMetric(ctx context.Context, metricName string, metricType string) (*Metric, error) // получить метрику.
+	GetAllMetricsByType(ctx context.Context, metricType string) ([]Metric, error)         // получить все метрики по типу.
+	PingRepo() bool                                                                       // узнать, доступен ли репозиторий и можно ли к нему обращаться.
+	CloseRepository()                                                                     // закрыть репозиторий.
 }
 
+// Metric хранит всю информацию о метрике.
 type Metric struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter

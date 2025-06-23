@@ -1,3 +1,4 @@
+// Пакет handlers хранит все хенделры сервера.
 package handlers
 
 import (
@@ -54,7 +55,7 @@ func NewHandlers(metricsUseCase *metrics.MetricsUseCase, pingRepoFunc func() boo
 	}
 }
 
-// TODO: ПЕРЕДЕЛАТЬ ПОД repository.Metric
+// GetAllMetrics обработчик получения всех метрик.
 func (h *Handlers) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("webpage").Parse(allDataHTMLTemplate)
 	if err != nil {
@@ -89,6 +90,7 @@ func (h *Handlers) GetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
+// UpdateMetric обработчик обнолвение метрики через POST.
 func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "" && contentType != "text/plain" {
@@ -148,6 +150,7 @@ func (h *Handlers) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// UpdateMetricFromJSON обработчик обновление метрики в формате JSON.
 func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
@@ -196,6 +199,7 @@ func (h *Handlers) UpdateMetricFromJSON(w http.ResponseWriter, r *http.Request) 
 	w.Write(output)
 }
 
+// UpdateArrayJSONMetrics обработчик массива JSON метрик.
 func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
@@ -243,6 +247,7 @@ func (h *Handlers) UpdateArrayJSONMetrics(w http.ResponseWriter, r *http.Request
 	w.Write(output)
 }
 
+// GetMetricByName обработчик получения метрики по имени и типу.
 func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -267,6 +272,7 @@ func (h *Handlers) GetMetricByName(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetMetricByNameFromJSON обработчик получения метрики через JSON input.
 func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	contentType := r.Header.Get("Content-Type")
@@ -314,6 +320,7 @@ func (h *Handlers) GetMetricByNameFromJSON(w http.ResponseWriter, r *http.Reques
 	w.Write(resp)
 }
 
+// PingRepository тестовый обработчик для того чтобы посмотреть доступен ли текущий репозиторий.
 func (h *Handlers) PingRepository(w http.ResponseWriter, r *http.Request) {
 	if h.pingRepoFunc() {
 		w.WriteHeader(http.StatusOK)

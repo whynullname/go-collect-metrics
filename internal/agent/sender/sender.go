@@ -1,3 +1,4 @@
+// Пакет sender предназначен для отправки метрик на сервер.
 package sender
 
 import (
@@ -42,6 +43,7 @@ func NewAgentSender(collector *collector.AgentCollector, config *config.AgentCon
 	}
 }
 
+// SendAllMetricsByArray отправить все метрики одним массивом.
 func (s *AgentSender) SendAllMetricsByArray() {
 	jsonArray, err := s.collector.GetAllMetrics()
 	if err != nil {
@@ -53,6 +55,7 @@ func (s *AgentSender) SendAllMetricsByArray() {
 	s.sendRequest(newRequest, url)
 }
 
+// SendAllMetricByArrayAndSHA отправить все метрики массивом и подписать с помощью SHA.
 func (s *AgentSender) SendAllMetricByArrayAndSHA() {
 	jsonArray, err := s.collector.GetAllMetrics()
 	if err != nil {
@@ -76,6 +79,9 @@ func (s *AgentSender) generateHash(data []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// SendMetricsByJSON отправить все метрики в формате JSON.
+// ВАЖНО! Каждая метрика отправляется по очереди.
+// Метод отправляет json закодированным с помощью gzip.
 func (s *AgentSender) SendMetricsByJSON() {
 	jsonArray, err := s.collector.GetAllMetrics()
 	if err != nil {
@@ -92,6 +98,7 @@ func (s *AgentSender) SendMetricsByJSON() {
 	}
 }
 
+// SendJSONWithEncoding позволяет отправить JSON в закодированном ввиде с помощью gzip.
 func (s *AgentSender) SendJSONWithEncoding(json []byte, enableEncoding bool) {
 	buff := s.GZIPData(json)
 	url := fmt.Sprintf("http://%s/update", s.config.EndPointAdress)
@@ -103,6 +110,7 @@ func (s *AgentSender) SendJSONWithEncoding(json []byte, enableEncoding bool) {
 	s.sendRequest(newRequest, url)
 }
 
+// GZIPData кодирует массив byte с помощью gzip.
 func (s *AgentSender) GZIPData(data []byte) *bytes.Buffer {
 	var buff bytes.Buffer
 	gz := gzip.NewWriter(&buff)
@@ -111,6 +119,7 @@ func (s *AgentSender) GZIPData(data []byte) *bytes.Buffer {
 	return &buff
 }
 
+// SendMetricsByPostResponse отправить каждую метрику с помощью POST формата по URL.
 func (s *AgentSender) SendMetricsByPostResponse() {
 	jsonArray, err := s.collector.GetAllMetrics()
 	if err != nil {

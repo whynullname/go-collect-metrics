@@ -1,3 +1,5 @@
+// Модуль collecor позволяет агенту собирать и обновлять все метрики.
+// Так же можно получить все метрики из репозитория.
 package collector
 
 import (
@@ -23,6 +25,7 @@ func NewAgentCollector(memStats *runtime.MemStats, metricsUseCase *metrics.Metri
 	}
 }
 
+// GetAllMetrics позволяет получить все метрики которые сохранены в репозитории.
 func (a *AgentCollector) GetAllMetrics() ([]repository.Metric, error) {
 	gaugeMetrics, err := a.metricsUseCase.GetAllMetricsByType(context.TODO(), repository.GaugeMetricKey)
 	if err != nil {
@@ -36,6 +39,7 @@ func (a *AgentCollector) GetAllMetrics() ([]repository.Metric, error) {
 	return append(gaugeMetrics, counterMetrics...), nil
 }
 
+// CollectMetrics собирает все нужные метрики в репозиторий.
 func (a *AgentCollector) CollectMetrics() {
 	memStats := a.MemStats
 	runtime.ReadMemStats(a.MemStats)
@@ -80,6 +84,7 @@ func (a *AgentCollector) CollectMetrics() {
 	a.UpdateGaugeMetricValue("CPUutilization1", v.UsedPercent)
 }
 
+// UpdateGaugeMetricValue обновляет метрику с типом Gauge.
 func (a *AgentCollector) UpdateGaugeMetricValue(metricID string, value float64) {
 	metric := repository.Metric{
 		MType: repository.GaugeMetricKey,
@@ -89,6 +94,7 @@ func (a *AgentCollector) UpdateGaugeMetricValue(metricID string, value float64) 
 	a.metricsUseCase.UpdateMetric(context.TODO(), &metric)
 }
 
+// UpdateGaugeMetricValue обновляет метрику с типом Counter.
 func (a *AgentCollector) UpdateCounterMetricValue(metricID string, value int64) {
 	metric := repository.Metric{
 		MType: repository.CounterMetricKey,
