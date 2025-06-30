@@ -17,12 +17,22 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
 func main() {
 	err := logger.Initialize("info")
 	if err != nil {
 		log.Fatalf("Fatal initialize logger")
 		return
 	}
+
+	logger.Log.Infof("Build version: %s", buildVersion)
+	logger.Log.Infof("Build date: %s", buildDate)
+	logger.Log.Infof("Build commit: %s", buildCommit)
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
