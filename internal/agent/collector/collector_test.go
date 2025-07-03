@@ -19,7 +19,6 @@ func TestCollectAndGetMetrics(t *testing.T) {
 	savedMetrics, err := collector.GetAllMetrics()
 	if err != nil {
 		t.Fatal(err)
-		return
 	}
 
 	alloc := float64(memStats.Alloc)
