@@ -254,7 +254,7 @@ func (p *Postgres) GetAllMetricsByType(ctx context.Context, metricType string) (
 		metric := repository.Metric{MType: metricType}
 		switch metricType {
 		case repository.GaugeMetricKey:
-			err := rows.Scan(&metric.ID, &metric.Value)
+			err = rows.Scan(&metric.ID, &metric.Value)
 			if err != nil {
 				return output, err
 			}
