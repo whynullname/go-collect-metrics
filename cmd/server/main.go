@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"log"
+	"os"
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
@@ -36,6 +39,11 @@ func main() {
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
+
+	if err := readRSAKey(cfg); err != nil {
+		return
+	}
+
 	var repo repository.Repository
 	if cfg.PostgressAdress == "" {
 		repo = inmemory.NewInMemoryRepository()
@@ -67,4 +75,25 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func readRSAKey(cfg *config.ServerConfig) error {
+	if cfg.RSAPrivateKeyPath != "" {
+		body, err := os.ReadFile(cfg.RSAPrivateKeyPath)
+		if err != nil {
+			logger.Log.Errorf("Error while read RSA private key: %v\n", err)
+			return err
+		}
+
+		block, _ := pem.Decode(body)
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
+		if err != nil {
+			logger.Log.Errorf("Error while parse RSA private key: %v\n", err)
+			return err
+		}
+		cfg.RSAKey = key
+	}
+
+	return nil
 }

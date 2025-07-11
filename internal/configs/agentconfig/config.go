@@ -1,17 +1,20 @@
 package config
 
 import (
+	"crypto/rsa"
 	"flag"
 	"os"
 	"strconv"
 )
 
 type AgentConfig struct {
-	EndPointAdress string
-	ReportInterval int
-	PollInterval   int
-	HashKey        string
-	RateLimit      int
+	EndPointAdress   string
+	ReportInterval   int
+	PollInterval     int
+	HashKey          string
+	RateLimit        int
+	RSAPublicKeyPath string
+	RSAKey           *rsa.PublicKey
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -38,6 +41,7 @@ func (a *AgentConfig) registerFlags() {
 	flag.IntVar(&a.PollInterval, "p", 2, "frequency of polling metrics from the runtime package")
 	flag.StringVar(&a.HashKey, "k", "", "key for sha hash")
 	flag.IntVar(&a.RateLimit, "l", 1, "rate limit goroutines to send metrics")
+	flag.StringVar(&a.RSAPublicKeyPath, "crypto-key", "", "path to RSA public key")
 }
 
 func (a *AgentConfig) checkEnv() {
@@ -71,5 +75,9 @@ func (a *AgentConfig) checkEnv() {
 		if err != nil {
 			a.PollInterval = int(i)
 		}
+	}
+
+	if keyPath := os.Getenv("CRYPTO_KEY"); keyPath != "" {
+		a.RSAPublicKeyPath = keyPath
 	}
 }

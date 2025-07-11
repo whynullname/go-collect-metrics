@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rsa"
 	"flag"
 	"os"
 	"strconv"
@@ -9,12 +10,14 @@ import (
 )
 
 type ServerConfig struct {
-	EndPointAdress  string
-	StoreInterval   uint64
-	FileStoragePath string
-	RestoreData     bool
-	PostgressAdress string
-	HashKey         string
+	EndPointAdress    string
+	StoreInterval     uint64
+	FileStoragePath   string
+	RestoreData       bool
+	PostgressAdress   string
+	HashKey           string
+	RSAPrivateKeyPath string
+	RSAKey            *rsa.PrivateKey
 }
 
 func NewServerConfig() *ServerConfig {
@@ -40,6 +43,7 @@ func (s *ServerConfig) registerFlags() {
 	flag.BoolVar(&s.RestoreData, "r", true, "need load saved data in start")
 	flag.StringVar(&s.PostgressAdress, "d", "", "adress to connect postgres")
 	flag.StringVar(&s.HashKey, "k", "", "key for sha hash")
+	flag.StringVar(&s.RSAPrivateKeyPath, "crypto-key", "", "path to RSA private key")
 }
 
 func (s *ServerConfig) checkEnvAddr() {

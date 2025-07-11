@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"log"
 	"os"
 	"os/signal"
@@ -34,6 +36,11 @@ func main() {
 
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
+
+	if err := readRSAKey(cfg); err != nil {
+		return
+	}
+
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
 	instance := agent.NewAgent(metricsUseCase, cfg)
@@ -49,4 +56,25 @@ func main() {
 	<-exit
 	cancel()
 	wg.Wait()
+}
+
+func readRSAKey(cfg *config.AgentConfig) error {
+	if cfg.RSAPublicKeyPath != "" {
+		body, err := os.ReadFile(cfg.RSAPublicKeyPath)
+		if err != nil {
+			logger.Log.Errorf("Error while read RSA public key: %v\n", err)
+			return err
+		}
+
+		block, _ := pem.Decode(body)
+		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
+
+		if err != nil {
+			logger.Log.Errorf("Error while parse RSA public key: %v\n", err)
+			return err
+		}
+		cfg.RSAKey = key
+	}
+
+	return nil
 }
