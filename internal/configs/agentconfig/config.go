@@ -2,9 +2,12 @@ package config
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"flag"
 	"os"
 	"strconv"
+
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 )
 
 type AgentConfig struct {
@@ -15,6 +18,14 @@ type AgentConfig struct {
 	RateLimit        int
 	RSAPublicKeyPath string
 	RSAKey           *rsa.PublicKey
+	configPath       string
+}
+
+type jsonConfig struct {
+	Adress           string `json:"address"`
+	ReportInterval   int    `json:"report_interval"`
+	PollInterval     int    `json:"poll_interval"`
+	RSAPublicKeyPath string `json:"crypto_key"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -33,6 +44,7 @@ func (a *AgentConfig) ParseFlags() {
 	a.registerFlags()
 	flag.Parse()
 	a.checkEnv()
+	a.readConfigFile()
 }
 
 func (a *AgentConfig) registerFlags() {
@@ -42,6 +54,8 @@ func (a *AgentConfig) registerFlags() {
 	flag.StringVar(&a.HashKey, "k", "", "key for sha hash")
 	flag.IntVar(&a.RateLimit, "l", 1, "rate limit goroutines to send metrics")
 	flag.StringVar(&a.RSAPublicKeyPath, "crypto-key", "", "path to RSA public key")
+	flag.StringVar(&a.configPath, "c", "", "path to json config")
+	flag.StringVar(&a.configPath, "config", "", "path to json config")
 }
 
 func (a *AgentConfig) checkEnv() {
@@ -79,5 +93,41 @@ func (a *AgentConfig) checkEnv() {
 
 	if keyPath := os.Getenv("CRYPTO_KEY"); keyPath != "" {
 		a.RSAPublicKeyPath = keyPath
+	}
+}
+
+func (a *AgentConfig) readConfigFile() {
+	if a.configPath == "" {
+		return
+	}
+
+	cfgFile, err := os.Open(a.configPath)
+	if err != nil {
+		logger.Log.Errorf("error wile open cfg file %v\n", err)
+		return
+	}
+
+	defer cfgFile.Close()
+	var cfg jsonConfig
+	decoder := json.NewDecoder(cfgFile)
+	if err := decoder.Decode(&cfg); err != nil {
+		logger.Log.Errorf("error wile json decode cfg file %v\n", err)
+		return
+	}
+
+	if a.EndPointAdress == "localhost:8080" {
+		a.EndPointAdress = cfg.Adress
+	}
+
+	if a.ReportInterval == 10 {
+		a.ReportInterval = cfg.ReportInterval
+	}
+
+	if a.PollInterval == 2 {
+		a.PollInterval = cfg.PollInterval
+	}
+
+	if a.RSAPublicKeyPath == "" {
+		a.RSAPublicKeyPath = cfg.RSAPublicKeyPath
 	}
 }

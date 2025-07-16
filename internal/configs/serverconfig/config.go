@@ -2,6 +2,7 @@ package config
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"flag"
 	"os"
 	"strconv"
@@ -18,6 +19,16 @@ type ServerConfig struct {
 	HashKey           string
 	RSAPrivateKeyPath string
 	RSAKey            *rsa.PrivateKey
+	configPath        string
+}
+
+type jsonConfig struct {
+	Adress            string `json:"address"`
+	RestoreData       bool   `json:"restore"`
+	StoreInterval     uint64 `json:"store_interval"`
+	StoreFilePath     string `json:"store_file"`
+	PostgressAdress   string `json:"database_dsn"`
+	RSAPrivateKeyPath string `json:"crypto_key"`
 }
 
 func NewServerConfig() *ServerConfig {
@@ -34,6 +45,7 @@ func (s *ServerConfig) ParseFlags() {
 	s.registerFlags()
 	flag.Parse()
 	s.checkEnvAddr()
+	s.readConfigFile()
 }
 
 func (s *ServerConfig) registerFlags() {
@@ -44,6 +56,8 @@ func (s *ServerConfig) registerFlags() {
 	flag.StringVar(&s.PostgressAdress, "d", "", "adress to connect postgres")
 	flag.StringVar(&s.HashKey, "k", "", "key for sha hash")
 	flag.StringVar(&s.RSAPrivateKeyPath, "crypto-key", "", "path to RSA private key")
+	flag.StringVar(&s.configPath, "c", "", "path to json config")
+	flag.StringVar(&s.configPath, "config", "", "path to json config")
 }
 
 func (s *ServerConfig) checkEnvAddr() {
@@ -83,5 +97,53 @@ func (s *ServerConfig) checkEnvAddr() {
 
 	if hashKey := os.Getenv("KEY"); hashKey != "" {
 		s.HashKey = hashKey
+	}
+
+	if cfgPath := os.Getenv("CONFIG"); cfgPath != "" {
+		s.configPath = cfgPath
+	}
+}
+
+func (s *ServerConfig) readConfigFile() {
+	if s.configPath == "" {
+		return
+	}
+
+	cfgFile, err := os.Open(s.configPath)
+	if err != nil {
+		logger.Log.Errorf("error wile open cfg file %v\n", err)
+		return
+	}
+
+	defer cfgFile.Close()
+	var cfg jsonConfig
+	decoder := json.NewDecoder(cfgFile)
+	if err := decoder.Decode(&cfg); err != nil {
+		logger.Log.Errorf("error wile json decode cfg file %v\n", err)
+		return
+	}
+
+	if s.EndPointAdress == "localhost:8080" {
+		s.EndPointAdress = cfg.Adress
+	}
+
+	if s.RestoreData {
+		s.RestoreData = cfg.RestoreData
+	}
+
+	if s.StoreInterval == 300 {
+		s.StoreInterval = cfg.StoreInterval
+	}
+
+	if s.FileStoragePath == "metrics.json" {
+		s.FileStoragePath = cfg.StoreFilePath
+	}
+
+	if s.PostgressAdress == "" {
+		s.PostgressAdress = cfg.PostgressAdress
+	}
+
+	if s.RSAPrivateKeyPath == "" {
+		s.RSAPrivateKeyPath = cfg.RSAPrivateKeyPath
 	}
 }
