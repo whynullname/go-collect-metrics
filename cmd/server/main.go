@@ -5,6 +5,8 @@ import (
 	"encoding/pem"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
@@ -72,9 +74,17 @@ func main() {
 
 	logger.Log.Infof("Start server in %s \n", cfg.EndPointAdress)
 
-	if err := server.ListenAndServe(); err != nil {
+	exit := make(chan os.Signal, 1)
+	idleConnChan := make(chan struct{}, 1)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	if err := server.ListenAndServe(exit, idleConnChan); err != nil {
 		log.Fatal(err)
 	}
+
+	<-idleConnChan
+	close(exit)
+	close(idleConnChan)
 }
 
 func readRSAKey(cfg *config.ServerConfig) error {

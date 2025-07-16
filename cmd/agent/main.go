@@ -48,7 +48,7 @@ func main() {
 	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
 	ctx, cancel := context.WithCancel(context.Background())
 	exit := make(chan os.Signal, 1)
-	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go instance.UpdateMetrics(ctx, &wg)
@@ -56,6 +56,7 @@ func main() {
 	<-exit
 	cancel()
 	wg.Wait()
+	close(exit)
 }
 
 func readRSAKey(cfg *config.AgentConfig) error {
