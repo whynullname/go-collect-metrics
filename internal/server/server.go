@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
@@ -71,8 +72,9 @@ func (s *Server) ListenAndServe(exit chan os.Signal, idleConn chan struct{}) err
 
 func (s *Server) gracefullShutdown(exit chan os.Signal, idleConn chan struct{}) {
 	<-exit
-
-	if err := s.server.Shutdown(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	if err := s.server.Shutdown(ctx); err != nil {
 		logger.Log.Errorln("error while shutdown server %v\n", err)
 	}
 

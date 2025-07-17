@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/whynullname/go-collect-metrics/internal/logger"
+	"github.com/whynullname/go-collect-metrics/internal/rsareader"
 )
 
 type ServerConfig struct {
@@ -46,6 +47,16 @@ func (s *ServerConfig) ParseFlags() {
 	flag.Parse()
 	s.checkEnvAddr()
 	s.readConfigFile()
+}
+
+func (s *ServerConfig) ReadRSA() error {
+	key, err := rsareader.ReadPrivateRSAKey(s.RSAPrivateKeyPath)
+	if err != nil {
+		return err
+	}
+
+	s.RSAKey = key
+	return nil
 }
 
 func (s *ServerConfig) registerFlags() {

@@ -1,8 +1,7 @@
 package main
 
 import (
-	"crypto/x509"
-	"encoding/pem"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +12,7 @@ import (
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
+	"github.com/whynullname/go-collect-metrics/internal/rsareader"
 	"github.com/whynullname/go-collect-metrics/internal/server"
 	"github.com/whynullname/go-collect-metrics/internal/storage/filestorage"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
@@ -42,7 +42,7 @@ func main() {
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
 
-	if err := readRSAKey(cfg); err != nil {
+	if err := cfg.ReadRSA(); !errors.Is(err, rsareader.ErrEmptyKeyPath) {
 		return
 	}
 
@@ -85,25 +85,4 @@ func main() {
 	<-idleConnChan
 	close(exit)
 	close(idleConnChan)
-}
-
-func readRSAKey(cfg *config.ServerConfig) error {
-	if cfg.RSAPrivateKeyPath != "" {
-		body, err := os.ReadFile(cfg.RSAPrivateKeyPath)
-		if err != nil {
-			logger.Log.Errorf("Error while read RSA private key: %v\n", err)
-			return err
-		}
-
-		block, _ := pem.Decode(body)
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-
-		if err != nil {
-			logger.Log.Errorf("Error while parse RSA private key: %v\n", err)
-			return err
-		}
-		cfg.RSAKey = key
-	}
-
-	return nil
 }

@@ -60,16 +60,17 @@ func (a *Agent) SendActualMetrics(ctx context.Context, wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
-	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	var workerWaitGroup sync.WaitGroup
 	jobs := make(chan *repository.Metric, 18)
 	for i := 0; i < a.config.RateLimit; i++ {
-		go a.worker(workerCtx, jobs)
+		workerWaitGroup.Add(1)
+		go a.worker(&workerWaitGroup, jobs)
 	}
 	for {
 		select {
 		case <-ctx.Done():
-			cancelWorkers()
 			close(jobs)
+			workerWaitGroup.Wait()
 			return
 		case <-ticker.C:
 			metricsArray, err := a.Collector.GetAllMetrics()
@@ -89,23 +90,16 @@ func (a *Agent) SendActualMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (a *Agent) worker(ctx context.Context, metricsToSend <-chan *repository.Metric) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case metric, ok := <-metricsToSend:
-			if !ok {
-				return
-			}
+func (a *Agent) worker(wg *sync.WaitGroup, metricsToSend <-chan *repository.Metric) {
+	defer wg.Done()
 
-			jsonBytes, err := json.Marshal(metric)
-			if err != nil {
-				logger.Log.Infof("error %s", err.Error())
-			} else {
-				logger.Log.Infof("Send metric %s\n", metric.ID)
-				a.sender.SendJSONWithEncoding(jsonBytes, true)
-			}
+	for metric := range metricsToSend {
+		jsonBytes, err := json.Marshal(metric)
+		if err != nil {
+			logger.Log.Infof("error %s", err.Error())
+		} else {
+			logger.Log.Infof("Send metric %s\n", metric.ID)
+			a.sender.SendJSONWithEncoding(jsonBytes, true)
 		}
 	}
 }

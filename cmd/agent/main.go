@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/rsareader"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
@@ -37,7 +37,7 @@ func main() {
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
 
-	if err := readRSAKey(cfg); err != nil {
+	if err := cfg.ReadRSA(); !errors.Is(err, rsareader.ErrEmptyKeyPath) {
 		return
 	}
 
@@ -57,25 +57,4 @@ func main() {
 	cancel()
 	wg.Wait()
 	close(exit)
-}
-
-func readRSAKey(cfg *config.AgentConfig) error {
-	if cfg.RSAPublicKeyPath != "" {
-		body, err := os.ReadFile(cfg.RSAPublicKeyPath)
-		if err != nil {
-			logger.Log.Errorf("Error while read RSA public key: %v\n", err)
-			return err
-		}
-
-		block, _ := pem.Decode(body)
-		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
-
-		if err != nil {
-			logger.Log.Errorf("Error while parse RSA public key: %v\n", err)
-			return err
-		}
-		cfg.RSAKey = key
-	}
-
-	return nil
 }
