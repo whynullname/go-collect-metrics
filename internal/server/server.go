@@ -1,11 +1,15 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
+	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
+	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares/compressmiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares/shamiddleware"
@@ -17,6 +21,7 @@ type Server struct {
 	Config   *config.ServerConfig
 	Router   chi.Router
 	Handlers *handlers.Handlers
+	server   *http.Server
 }
 
 func NewServer(metricsUseCase *metrics.MetricsUseCase, config *config.ServerConfig, pingRepoFunc func() bool) *Server {
@@ -56,8 +61,24 @@ func (s *Server) registerMiddlewares(r chi.Router) {
 	r.Use(shamiddleware.HashSHA256(s.Config))
 }
 
-func (s *Server) ListenAndServe() error {
-	return http.ListenAndServe(s.Config.EndPointAdress, s.Router)
+func (s *Server) ListenAndServe(exit chan os.Signal, idleConn chan struct{}) error {
+	s.server = &http.Server{
+		Addr:    s.Config.EndPointAdress,
+		Handler: s.Router,
+	}
+	go s.gracefullShutdown(exit, idleConn)
+	return s.server.ListenAndServe()
+}
+
+func (s *Server) gracefullShutdown(exit chan os.Signal, idleConn chan struct{}) {
+	<-exit
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	if err := s.server.Shutdown(ctx); err != nil {
+		logger.Log.Errorln("error while shutdown server %v\n", err)
+	}
+
+	idleConn <- struct{}{}
 }
 
 func pprofRouter() http.Handler {

@@ -1,13 +1,18 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
 	"github.com/whynullname/go-collect-metrics/internal/repository/postgres"
+	"github.com/whynullname/go-collect-metrics/internal/rsareader"
 	"github.com/whynullname/go-collect-metrics/internal/server"
 	"github.com/whynullname/go-collect-metrics/internal/storage/filestorage"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
@@ -36,6 +41,11 @@ func main() {
 
 	cfg := config.NewServerConfig()
 	cfg.ParseFlags()
+
+	if err := cfg.ReadRSA(); !errors.Is(err, rsareader.ErrEmptyKeyPath) {
+		return
+	}
+
 	var repo repository.Repository
 	if cfg.PostgressAdress == "" {
 		repo = inmemory.NewInMemoryRepository()
@@ -64,7 +74,15 @@ func main() {
 
 	logger.Log.Infof("Start server in %s \n", cfg.EndPointAdress)
 
-	if err := server.ListenAndServe(); err != nil {
+	exit := make(chan os.Signal, 1)
+	idleConnChan := make(chan struct{}, 1)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	if err := server.ListenAndServe(exit, idleConnChan); err != nil {
 		log.Fatal(err)
 	}
+
+	<-idleConnChan
+	close(exit)
+	close(idleConnChan)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/agentconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/repository/inmemory"
+	"github.com/whynullname/go-collect-metrics/internal/rsareader"
 	"github.com/whynullname/go-collect-metrics/internal/usecase/metrics"
 )
 
@@ -34,6 +36,11 @@ func main() {
 
 	cfg := config.NewAgentConfig()
 	cfg.ParseFlags()
+
+	if err := cfg.ReadRSA(); !errors.Is(err, rsareader.ErrEmptyKeyPath) {
+		return
+	}
+
 	repo := inmemory.NewInMemoryRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
 	instance := agent.NewAgent(metricsUseCase, cfg)
@@ -41,7 +48,7 @@ func main() {
 	logger.Log.Infof("Start agent, try work with server in %s \n", cfg.EndPointAdress)
 	ctx, cancel := context.WithCancel(context.Background())
 	exit := make(chan os.Signal, 1)
-	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go instance.UpdateMetrics(ctx, &wg)
@@ -49,4 +56,5 @@ func main() {
 	<-exit
 	cancel()
 	wg.Wait()
+	close(exit)
 }

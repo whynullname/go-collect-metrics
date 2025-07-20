@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -117,6 +119,21 @@ func (s *AgentSender) GZIPData(data []byte) *bytes.Buffer {
 	gz.Write(data)
 	gz.Close()
 	return &buff
+}
+
+func (s *AgentSender) EncryptData(data []byte) []byte {
+	if s.config.RSAKey == nil {
+		logger.Log.Warnf("Can't encrypt data, because rsa key is nil")
+		return data
+	}
+
+	encryptedMessage, err := rsa.EncryptPKCS1v15(rand.Reader, s.config.RSAKey, data)
+	if err != nil {
+		logger.Log.Errorf("Error while encrypt data: %v\n", err)
+		return data
+	}
+
+	return encryptedMessage
 }
 
 // SendMetricsByPostResponse отправить каждую метрику с помощью POST формата по URL.
