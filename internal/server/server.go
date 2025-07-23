@@ -11,6 +11,7 @@ import (
 	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares"
+	"github.com/whynullname/go-collect-metrics/internal/middlewares/cidrmiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares/compressmiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/middlewares/shamiddleware"
 	"github.com/whynullname/go-collect-metrics/internal/server/handlers"
@@ -59,6 +60,7 @@ func (s *Server) registerMiddlewares(r chi.Router) {
 	r.Use(middlewares.Logging)
 	r.Use(compressmiddleware.GZIP)
 	r.Use(shamiddleware.HashSHA256(s.Config))
+	r.Use(cidrmiddleware.CheckCIDR(s.Config))
 }
 
 func (s *Server) ListenAndServe(exit chan os.Signal, idleConn chan struct{}) error {

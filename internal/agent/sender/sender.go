@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -164,8 +165,34 @@ func (s *AgentSender) SendMetricsByPostResponse() {
 }
 
 func (s *AgentSender) sendRequest(request *resty.Request, url string) {
+	localIp := getLocalIP()
+	if localIp != "" {
+		request.SetHeader("X-Real-IP", localIp)
+	}
 	_, err := request.Post(url)
 	if err != nil {
 		logger.Log.Infof("error %s", err.Error())
 	}
+}
+
+func getLocalIP() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, i := range interfaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				if ip4 := ipNet.IP.To4(); ip4 != nil {
+					return ip4.String()
+				}
+			}
+		}
+	}
+	return ""
 }

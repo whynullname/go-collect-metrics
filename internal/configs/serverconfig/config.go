@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"flag"
+	"net"
 	"os"
 	"strconv"
 
@@ -21,6 +22,8 @@ type ServerConfig struct {
 	RSAPrivateKeyPath string
 	RSAKey            *rsa.PrivateKey
 	configPath        string
+	trustedSubnet     string
+	TrustedSubnet     *net.IPNet
 }
 
 type jsonConfig struct {
@@ -30,6 +33,7 @@ type jsonConfig struct {
 	StoreFilePath     string `json:"store_file"`
 	PostgressAdress   string `json:"database_dsn"`
 	RSAPrivateKeyPath string `json:"crypto_key"`
+	TrustedSubnet     string `json:"trusted_subnet"`
 }
 
 func NewServerConfig() *ServerConfig {
@@ -47,6 +51,7 @@ func (s *ServerConfig) ParseFlags() {
 	flag.Parse()
 	s.checkEnvAddr()
 	s.readConfigFile()
+	s.parseCIDR()
 }
 
 func (s *ServerConfig) ReadRSA() error {
@@ -69,6 +74,7 @@ func (s *ServerConfig) registerFlags() {
 	flag.StringVar(&s.RSAPrivateKeyPath, "crypto-key", "", "path to RSA private key")
 	flag.StringVar(&s.configPath, "c", "", "path to json config")
 	flag.StringVar(&s.configPath, "config", "", "path to json config")
+	flag.StringVar(&s.trustedSubnet, "t", "", "subnet string")
 }
 
 func (s *ServerConfig) checkEnvAddr() {
@@ -112,6 +118,10 @@ func (s *ServerConfig) checkEnvAddr() {
 
 	if cfgPath := os.Getenv("CONFIG"); cfgPath != "" {
 		s.configPath = cfgPath
+	}
+
+	if subnet := os.Getenv("TRUSTED_SUBNET"); subnet != "" {
+		s.trustedSubnet = subnet
 	}
 }
 
@@ -157,4 +167,21 @@ func (s *ServerConfig) readConfigFile() {
 	if s.RSAPrivateKeyPath == "" {
 		s.RSAPrivateKeyPath = cfg.RSAPrivateKeyPath
 	}
+
+	if s.trustedSubnet == "" {
+		s.trustedSubnet = cfg.TrustedSubnet
+	}
+}
+
+func (s *ServerConfig) parseCIDR() {
+	if s.trustedSubnet == "" {
+		return
+	}
+	_, ipnet, err := net.ParseCIDR(s.trustedSubnet)
+	if err != nil {
+		logger.Log.Error("Invalid CIDR format in trusted_subnet: %v", err)
+		return
+	}
+
+	s.TrustedSubnet = ipnet
 }
