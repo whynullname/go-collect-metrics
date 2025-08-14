@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package metrics;
+option go_package = "metrics/proto";
+
+message Metric {
+    string id = 1;
+    string type = 2;
+    int64 delta = 3;
+    double value = 4;
+}
+
+message GetAllMetricsRequest {
+    string error = 1;
+}
+
+message GetAllMetricsResponse {
+    string error = 1;
+    repeated Metric gauge_metrics = 2;
+    repeated Metric counter_metrics = 3;
+}
+
+message UpdateMetricRequest {
+    Metric metric = 1;
+}
+
+message UpdateMetricResponse {
+    string error = 1;
+    Metric updated_metric = 2;
+}
+
+message UpdateMetricsRequest {
+    repeated Metric request_metrics = 1;
+}
+
+message UpdateMetricsResponse {
+    string error = 1;
+    repeated Metric updated_metrics = 2;
+}
+
+message GetMetricByNameRequest {
+    string type = 1;
+    string name = 2;
+}
+
+message GetMetricByNameResponse {
+    string error = 1;
+    Metric metric = 2;
+}
+
+service Metrics {
+    rpc GetAllMetrics(GetAllMetricsRequest) returns (GetAllMetricsResponse);
+    rpc UpdateMetric(UpdateMetricRequest) returns (UpdateMetricResponse);
+    rpc UpdateMetrics(UpdateMetricsRequest) returns (UpdateMetricsResponse);
+    rpc GetMetricByName(GetMetricByNameRequest) returns (GetMetricByNameResponse);
+}
