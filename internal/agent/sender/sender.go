@@ -165,9 +165,9 @@ func (s *AgentSender) SendMetricsByPostResponse() {
 }
 
 func (s *AgentSender) sendRequest(request *resty.Request, url string) {
-	localIp := getLocalIP()
-	if localIp != "" {
-		request.SetHeader("X-Real-IP", localIp)
+	localIP := getLocalIP()
+	if localIP != "" {
+		request.SetHeader("X-Real-IP", localIP)
 	}
 	_, err := request.Post(url)
 	if err != nil {
