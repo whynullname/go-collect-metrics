@@ -58,7 +58,7 @@ func main() {
 	}
 	defer repo.CloseRepository()
 	metricsUseCase := metrics.NewMetricUseCase(repo)
-	server := grpcserver.NewGrpcServer(metricsUseCase)
+	server := grpcserver.NewGrpcServer(metricsUseCase, cfg)
 	fileStorage, err := filestorage.NewFileStorage(cfg.FileStoragePath)
 
 	if err != nil {
@@ -78,7 +78,7 @@ func main() {
 	idleConnChan := make(chan struct{}, 1)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-	if err := server.ListenServer(); err != nil {
+	if err := server.ListenServer(exit, idleConnChan); err != nil {
 		log.Fatal(err)
 	}
 

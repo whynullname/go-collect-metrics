@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"net"
+	"os"
 
+	config "github.com/whynullname/go-collect-metrics/internal/configs/serverconfig"
 	"github.com/whynullname/go-collect-metrics/internal/logger"
 	pb "github.com/whynullname/go-collect-metrics/internal/proto"
 	"github.com/whynullname/go-collect-metrics/internal/repository"
@@ -16,29 +18,40 @@ import (
 type GrpcServer struct {
 	pb.UnimplementedMetricsServer
 
+	server         *grpc.Server
 	metricsUseCase *metrics.MetricsUseCase
+	config         *config.ServerConfig
 }
 
-func NewGrpcServer(useCase *metrics.MetricsUseCase) *GrpcServer {
+func NewGrpcServer(useCase *metrics.MetricsUseCase, config *config.ServerConfig) *GrpcServer {
 	return &GrpcServer{
 		metricsUseCase: useCase,
+		config:         config,
 	}
 }
 
-func (g *GrpcServer) ListenServer() error {
-	listen, err := net.Listen("tcp", ":3200")
+func (g *GrpcServer) ListenServer(exit chan os.Signal, idleConn chan struct{}) error {
+	listen, err := net.Listen("tcp", g.config.EndPointAdress)
 	if err != nil {
 		return err
 	}
 
 	s := grpc.NewServer()
 	pb.RegisterMetricsServer(s, g)
+	g.server = s
 
+	go g.gracefulStop(exit, idleConn)
 	if err := s.Serve(listen); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (g *GrpcServer) gracefulStop(exit chan os.Signal, idleConn chan struct{}) {
+	<-exit
+	g.server.GracefulStop()
+	idleConn <- struct{}{}
 }
 
 func (g *GrpcServer) GetAllMetrics(ctx context.Context, in *pb.GetAllMetricsRequest) (*pb.GetAllMetricsResponse, error) {
@@ -82,10 +95,14 @@ func (g *GrpcServer) GetAllMetrics(ctx context.Context, in *pb.GetAllMetricsRequ
 }
 
 func (g *GrpcServer) UpdateMetric(ctx context.Context, in *pb.UpdateMetricRequest) (*pb.UpdateMetricResponse, error) {
-	var response pb.UpdateMetricResponse
+	response := pb.UpdateMetricResponse{
+		UpdatedMetric: &pb.Metric{},
+	}
 	requestMetric := &repository.Metric{
 		MType: in.Metric.Type,
 		ID:    in.Metric.Id,
+		Value: &in.Metric.Value,
+		Delta: &in.Metric.Delta,
 	}
 
 	updatedMetric, err := g.metricsUseCase.UpdateMetric(ctx, requestMetric)
@@ -105,6 +122,7 @@ func (g *GrpcServer) UpdateMetric(ctx context.Context, in *pb.UpdateMetricReques
 	response.UpdatedMetric.Delta = *updatedMetric.Delta
 	response.UpdatedMetric.Value = *updatedMetric.Value
 
+	logger.Log.Infof("update metric %s", &response.UpdatedMetric.Id)
 	return &response, nil
 }
 
